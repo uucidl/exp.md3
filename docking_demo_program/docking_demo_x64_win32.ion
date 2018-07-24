@@ -1,1 +1,1 @@
-#foreign(source="docking_demo_win32_x64.c")
+#foreign(source="docking_demo_x64_win32.c")
