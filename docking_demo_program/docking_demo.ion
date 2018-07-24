@@ -1,0 +1,6 @@
+import libc
+
+func main()
+{
+    libc.printf("Hello, World\n");
+}
