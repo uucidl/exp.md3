@@ -1,0 +1,2 @@
+@url: https://www.libsdl.org/release/SDL2-devel-2.0.8-VC.zip
+@name: SDL2

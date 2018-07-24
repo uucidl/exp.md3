@@ -1,6 +1,26 @@
 import libc
+import noir
+import sdl
 
-func main()
+func main(argc : int, argv : char**) : int
 {
     libc.printf("Hello, World\n");
+    noir.app.window.init_opengl = true;
+    noir.app.window.title = "Docking Demo";
+    if (!noir.app_init()) {
+        noir.print_and_clear_error(); libc.exit(1);
+    }
+
+    glcontext := sdl.SDL_GL_CreateContext(noir.app.window.sdl);
+    if (!glcontext) {
+        noir.sdl_error("OpenGL Context: ");
+        noir.print_and_clear_error(); libc.exit(1);
+    }
+    while (noir.app_update()) {
+        // @todo:         gl.glClear(gl.GL_COLOR_BUFFER_BIT);
+        noir.print_and_clear_error();
+    }
+    noir.print_and_clear_error();
+    return 0;
 }
+
