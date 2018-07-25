@@ -1,0 +1,2 @@
+@url: http://libsdl.org/release/SDL2-2.0.8.dmg
+@manual
