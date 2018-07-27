@@ -1,0 +1,144 @@
+// @url: https://pdfs.semanticscholar.org/dcb8/8719880e1f76ad71fb1c5aebb118e2ecfe71.pdf
+
+enum LocationKind
+{
+    LOCATION_KIND_PARAM_I,
+    LOCATION_KIND_LOCAL_I,
+}
+
+struct Location
+{
+    kind: LocationKind;
+    union {
+        index: int;
+        int64: int64;
+    }
+}
+
+enum LiteralKind
+{
+    LITERAL_KIND_INTEGER,
+    LITERAL_KIND_FLOAT,
+    LITERAL_KIND_STRING,
+}
+
+struct Literal
+{
+    kind: LiteralKind;
+    union {
+        integer: int64;
+        real: double;
+        string: char const*;
+    };
+}
+
+enum OperandKind
+{
+    OPERAND_KIND_LOCATION,
+    OPERAND_KIND_LITERAL,
+}
+
+struct Operand
+{
+    kind: OperandKind;
+    union {
+        location: Location;
+        literal: Literal;
+    }
+}
+
+enum ControlLabelKind
+{
+    CONTROL_LABEL_KIND_RETURN,
+    CONTROL_LABEL_KIND_BLOCK_LABEL,
+}
+
+struct ControlLabel
+{
+    kind: ControlLabelKind;
+    block_label: char const*;
+}
+
+struct CGEnvironment
+{
+    label : ControlLabel;
+    data_map : Map; // Maps identifiers to locations
+    identifiers: Identifier*;
+    num_identifiers: usize;
+    locations: Location*;
+    num_locations: usize;
+}
+
+enum CGDataDestinationKind
+{
+    DATA_DESTINATION_KIND_EFFECT,
+    DATA_DESTINATION_KIND_LOCATION,
+}
+
+struct CGDataDestination
+{
+    kind: CGDataDestinationKind;
+    location: Location;
+}
+
+const MAX_CHOICES = 2;
+
+struct CGControlDestination
+{
+    choices : Label[MAX_CHOICES];
+    num_choices: usize; // @invariant: num_labels>=1
+}
+
+struct CGDestination
+{
+    data : CGDataDestination;
+    control : CGControlDestination;
+}
+
+func statement_destination(label: Label) : CGDestination
+{
+    return CGDestination{
+        data.kind = DATA_DESTINATION_KIND_EFFECT,
+        control.choices = { label },
+        control.num_choices = 1,
+    }
+}
+
+func value_destination(location: Location, label: Label) : CGDestination
+{
+    return CGDestination{
+        data.kind = DATA_DESTINATION_KIND_LOCATION,
+        data.location = location,
+        control.choices = { label },
+        control.num_choices = 1,
+    }
+}
+
+func test_statement_destination(true_label: Label, false_label: Label) : CGDestination
+{
+    return CGDestination{
+        data.kind = DATA_DESTINATION_KIND_EFFECT,
+        control.choices = { true_label, false_label },
+        control.num_choices = 2,
+    }
+}
+
+func test_expression_destination(location: Location, true_label: Label, false_label: Label) : CGDestination
+{
+    return CGDestination{
+        data.kind = DATA_DESTINATION_KIND_LOCATION,
+        data.location = location,
+        control.choices = { true_label, false_label },
+        control.num_choices = 2,
+    }
+}
+
+func func_destination() : CGDestination
+{
+    return CGDestination{
+        data.kind = DATA_DESTINATION_KIND_EFFECT,
+        control.choices = { kind = CONTROL_LABEL_KIND_RETURN },
+    }
+}
+
+func generate_code(expr: Expr, env: CGEnvironment, destination: CGDestination, code: *CodeBuffer);

@@ -13,10 +13,13 @@ if not exist "%OutputDir%" mkdir "%OutputDir%"
 if not exist "%ObjDir%" mkdir "%ObjDir%"
 if %errorlevel% neq 0 exit /b 1
 
-set CLCommonFlags="-I%HereDir%" -nologo -Z7 -W3 -wd4244 -wd4267 -wd4204 -wd4201 -D_CRT_SECURE_NO_WARNINGS -Fo:"%ObjDir%"\ 
+set CLCommonFlags="-I%HereDir%" -nologo -Z7 -W3 -wd4244 -wd4267 -wd4204 -wd4201 -D_CRT_SECURE_NO_WARNINGS -Fo:"%ObjDir%"\
 
 set IonCommonFlags=
 set IONHOME=%HereDir%\deps\bitwise\ion\
+
+REM work in progress
+"%IonExe%" -check ddcg_program
 
 call :build_program_module docking_demo_program
 if %errorlevel% neq 0 exit /b 1
