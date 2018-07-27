@@ -1,0 +1,180 @@
+import libc {
+  libc_calloc = calloc,
+  libc_malloc = malloc,
+  libc_free = free,
+  libc_exit = exit,
+}
+
+struct Map
+{
+  keys : uint64*;
+  ptrs : void**;
+  cap : usize;
+  len : usize;
+}
+
+func map_grow(map : Map*, size : usize)
+{
+     size = pow2_ge_uint64(size);
+     new_map : Map = {
+          keys = libc_calloc(size, sizeof(map.keys[0])),
+          ptrs = libc_malloc(size * sizeof(map.ptrs[0])),
+          cap = size,
+     };
+     if (!new_map.keys) { libc_exit(1); }
+     if (!new_map.ptrs) { libc_exit(1); }
+
+     for (i:=0; i<map.cap; i++)
+     {
+          if (map.keys[i])
+          {
+               map_put(&new_map, map.keys[i], map.ptrs[i]);
+          }
+     }
+
+     #assert(is_pow2_uint64(new_map.cap));
+     #assert(new_map.len == map.len);
+
+     libc_free(map.keys);
+     libc_free(map.ptrs);
+
+     *map = new_map;
+}
+
+func map_free(map : Map*)
+{
+     libc_free(map.keys); map.keys = NULL;
+     libc_free(map.ptrs); map.ptrs = NULL;
+     *map = {};
+}
+
+// returns value at key
+func map_get(map : Map const*, key : uint64) : void*
+{
+     #assert(map.cap >= map.len);
+
+     index := hash_uint64(key);
+     rest := map.len;
+     while (rest > 0) {
+          index &= (map.cap - 1);
+          if (!map.keys[index]) {
+               return NULL;
+          }
+          if (map.keys[index] == key) {
+               return map.ptrs[index];
+          }
+          index++;
+          rest--;
+     }
+     return NULL;
+}
+
+// puts value in hasmapable, returns previous value
+// grows the map if necessary
+func map_put(map : Map*, key : uint64, data : void*)
+{
+     #assert(key); // key == 0 is disallowed, as it is the empty entry sentinel
+     if (map.cap == 0 || map.cap - map.len < map.len)
+     {
+          map_grow(map, 1 + 2 * map.cap);
+     }
+
+     #assert(is_pow2_uint64(map.cap));
+     index := hash_uint64(key);
+     last := index;
+     do
+     {
+          index &= map.cap - 1;
+          if (!map.keys[index])
+          {
+               map.keys[index] = key;
+               map.ptrs[index] = data;
+               map.len++;
+               return;
+          }
+          else if (map.keys[index] == key)
+          {
+               map.ptrs[index] = data;
+               return;
+          }
+          index++;
+     } while (index != last);
+     #assert(false);
+     libc_exit(1);
+}
+
+func map_remove(map : Map*, key : uint64)
+{
+     if (!key) {
+          return;
+     }
+     #assert(is_pow2_uint64(map.cap));
+     index := hash_uint64(key);
+     last := index;
+     do
+     {
+          index &= map.cap - 1;
+          if (map.keys[index] == key)
+          {
+               map.keys[index] = 0;
+               map.len--;
+               return;
+          }
+          index++;
+     } while (index != last);
+     #assert(0);
+     libc_exit(1);
+}
+
+func hash_uint64(x : uint64) : uint64
+{
+     x *= 0xff51afd7ed558ccd;
+     x ^= x >> 32;
+     return x;
+}
+
+func hash_bytes(bytes : char const*, num_bytes : usize) : uint64
+{
+     x : uint64 = 0xcbf29ce484222325;
+     for (i:=0; i<num_bytes; i++)
+     {
+          x ^= bytes[i];
+          x *= 0x100000001b3;
+          x ^= x >> 32;
+     }
+     return x;
+}
+
+func hash_ptr(ptr : void const*) : uint64
+{
+     return hash_uint64(uintptr(ptr));
+}
+
+func pow2_ge_uint64(x : uint64) : uint64
+{
+     for (i : uint = 0; ; i++)
+     {
+          if ((1uLL << i) >= x) { return 1uLL << i; }
+     }
+     return 1;
+}
+
+func is_pow2_uint64(x : uint64) : bool
+{
+     i : int;
+     for (i = 0; i < 64; i++)
+     {
+          if (x & 1) { break; }
+          x >>= 1;
+     }
+     if (i == 64) { return false; }
+     i++; x >>= 1;
+     for (; i < 64; i++)
+     {
+          if (x & 1) { return false; }
+          x >>= 1;
+     }
+     return i == 64;
+}
+
+

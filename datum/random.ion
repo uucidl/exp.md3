@@ -1,0 +1,25 @@
+// *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
+// Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
+
+struct pcg32_random
+{
+    state : uint64; // any value possible
+    inc : uint64; // @pre: must be odd
+}
+
+func pcg32_random_check(x : pcg32_random) : bool
+{
+    #assert(x.inc & 1 == 1); // inc must be odd
+    return x.inc & 1 == 1;
+}
+
+func pcg32_random_r(rng : pcg32_random*) : uint32
+{
+    oldstate := rng.state;
+    // Advance internal state
+    rng.state = oldstate * 6364136223846793005ULL + (rng.inc|1);
+    // Calculate output function (XSH RR), uses old state for max ILP
+    xorshifted : uint32 = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    rot : uint32 = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}

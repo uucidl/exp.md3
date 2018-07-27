@@ -1,0 +1,9 @@
+func bits(x : uint64, start : int, len : int) : uint64 {
+  return (x>>start) & ((uint64(1)<<len) - 1);
+}
+
+func sign_extend(x : uint64, num_bits : int) : uint64 {
+  return uint64(int64(x << (64-num_bits)) >> (64-num_bits));
+}
+	      
+

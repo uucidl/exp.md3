@@ -1,0 +1,6 @@
+import containers {...}
+
+func main(argc : int, argv: char**) : int {
+  test_array();
+  return 0;
+}
