@@ -1,0 +1,151 @@
+// @note: tested on osx,x64 only
+
+#foreign(header="<sys/errno.h>")
+#foreign(header="<sys/types.h>")
+#foreign(header="<sys/sysctl.h>")
+
+@foreign("errno")
+var errno : int;
+
+@foreign("EBADF")
+const EBADF = int(9);
+@foreign("EFAULT")
+const EFAULT = int(14);
+@foreign("ENOTDIR")
+const ENOTDIR = int(20);
+@foreign("EINVAL")
+const EINVAL = int(22);
+@foreign("ERANGE")
+const ERANGE = int(34);
+
+#foreign(header="<sys/attr.h>")
+#foreign(header="<sys/types.h>")
+#foreign(header="<sys/vnode.h>")
+#foreign(header="<unistd.h>")
+
+@foreign("off_t")
+typedef Off = int64;
+
+@foreign("VNON")
+const VNON = int(0);
+@foreign("VREG")
+const VREG = int(1);
+@foreign("VDIR")
+const VDIR = int(2);
+@foreign("VBLK")
+const VBLK = int(3);
+@foreign("VCHR")
+const VCHR = int(4);
+@foreign("VLNK")
+const VLNK = int(5);
+@foreign("VSOCK")
+const VSOCK = int(6);
+@foreign("VFIFO")
+const VFIFO = int(7);
+@foreign("VBAD")
+const VBAD = int(8);
+@foreign("VSTR")
+const VSTR = int(9);
+@foreign("VCPLX")
+const VCPLX = int(10);
+
+@foreign("ATTR_CMN_RETURNED_ATTRS")
+const ATTR_CMN_RETURNED_ATTRS = uint32(0x8000_0000);
+@foreign("ATTR_CMN_ERROR")
+const ATTR_CMN_ERROR          = uint32(0x2000_0000);
+@foreign("ATTR_CMN_NAME")
+const ATTR_CMN_NAME           = uint32(0x0000_0001);
+@foreign("ATTR_CMN_OBJTYPE")
+const ATTR_CMN_OBJTYPE        = uint32(0x0000_0008);
+@foreign("ATTR_CMN_OBJTAG")
+const ATTR_CMN_OBJTAG         = uint32(0x0000_0010);
+
+@foreign("ATTR_FILE_TOTALSIZE")
+const ATTR_FILE_TOTALSIZE   = uint32(0x0000_0002);
+@foreign("ATTR_FILE_ALLOCSIZE")
+const ATTR_FILE_ALLOCSIZE   = uint32(0x0000_0004);
+@foreign("ATTR_FILE_IOBLOCKSIZE")
+const ATTR_FILE_IOBLOCKSIZE = uint32(0x0000_0008);
+
+@foreign("FSOPT_NOFOLLOW")
+const FSOPT_NOFOLLOW         = uint32(0x0000_0001);
+@foreign("FSOPT_REPORT_FULLSIZE")
+const FSOPT_REPORT_FULLSIZE  = uint32(0x0000_0004);
+@foreign("FSOPT_PACK_INVAL_ATTRS")
+const FSOPT_PACK_INVAL_ATTRS = uint32(0x00000008);
+
+
+@foreign("attrgroup_t")
+typedef Attrgroup = uint32;
+
+@foreign("fsobj_type_t")
+typedef FSObjType = uint32;
+@foreign("fsobj_tag_t")
+typedef FSObjTag = uint32;
+
+@foreign("struct attrlist")
+struct AttrList
+{
+	bitmapcount : uint16;
+	reserved : uint16;
+	commonattr : Attrgroup;
+	volattr : Attrgroup;
+	dirattr : Attrgroup;
+	fileattr : Attrgroup;
+	forkattr : Attrgroup;
+}
+
+@foreign("attrreference_t")
+struct Attrreference
+{
+	attr_dataoffset : int32;
+	attr_length : uint32;
+}
+
+@foreign("struct attribute_set")
+struct AttributeSet
+{
+  commonattr : Attrgroup;
+  volattr : Attrgroup;
+  dirattr : Attrgroup;
+  fileattr : Attrgroup;
+  forkattr : Attrgroup;
+}
+
+@foreign("ATTR_BIT_MAP_COUNT")
+const ATTR_BIT_MAP_COUNT = 5;
+
+func make_attrlist(proto : AttrList) : AttrList
+{
+  return {
+      bitmapcount = ATTR_BIT_MAP_COUNT,
+      commonattr = proto.commonattr,
+      volattr = proto.volattr,
+      dirattr = proto.dirattr,
+      fileattr = proto.fileattr,
+      forkattr = proto.forkattr
+   };
+}
+
+@foreign("getattrlistbulk")
+func getattrlistbulk(dirfd : int, attrList : AttrList*, attrBuf : void*, attrBufSize : bsd_size, options : uint64) : int;
+
+#foreign(header="<sys/fcntl.h>")
+
+@foreign("O_RDONLY")
+const O_RDONLY = uint32(0x0000);
+@foreign("O_WRONLY")
+const O_WRONLY = uint32(0x0001);
+@foreign("O_RDWR")
+const O_RDWR   = uint32(0x0002);
+
+@foreign("open")
+func open(path : char const*, oflags : int, ...) : int;
+
+#foreign(header="<unistd.h>")
+
+@foreign("close")
+func close(fildes : int) : int;
+
+@foreign("sysctlbyname")
+func sysctlbyname(name : char const*, oldp : void*, oldlenp : bsd_size*, newp : void const*, newlen : bsd_size) : int;

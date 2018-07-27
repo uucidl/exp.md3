@@ -1,0 +1,178 @@
+import containers {...}
+import platform.win32 {...}
+import libc {
+  libc_calloc = calloc,
+  libc_free = free,
+  libc_strlen = strlen,
+  printf,
+}
+
+struct PlatformPathListGenerator
+{
+  query : HANDLE;
+  root  : uint8*;
+  arena : MemoryArena;
+}
+
+func platform_find_all_files(root : uint8 const*) : PathListGenerator
+{
+	result := PathListGenerator{
+    error = PathListError_InvalidRoot
+  };
+
+	query_str : wchar*;
+  necessary_wchars := MultiByteToWideChar(CP_UTF8, 0, (:char const*)root, -1, NULL, 0);
+  query_str = buf_fit(query_str, sizeof(int16), necessary_wchars + 1);
+	wrote := MultiByteToWideChar(CP_UTF8, 0, (:char const*)root, -1, &query_str[buf_len(query_str)], buf_cap(query_str)-buf_len(query_str));
+  if (wrote > 1)
+  {
+    buf_hdr_mutable(query_str).size += (wrote - 1) * sizeof(query_str[0]);
+  }
+  suffix := "\\*";
+  if (query_str[buf_len(query_str) - 1] == suffix[0]) {
+    buf_cat_wchars_from_zstr_ascii(&query_str, &suffix[1]);
+  } else {
+    buf_cat_wchars_from_zstr_ascii(&query_str, &suffix[0]);
+  }
+
+  // Open query and get info about first file:
+  one_file : WIN32_FIND_DATAW;
+  AdditionalFlags := FIND_FIRST_EX_LARGE_FETCH; // @todo @platform_specific{windows>7}
+	query := FindFirstFileExW(query_str, FindExInfoStandard, &one_file, FindExSearchNameMatch, NULL, AdditionalFlags);
+
+  if (query != INVALID_HANDLE_VALUE) {
+    result.resources = libc_calloc(1, sizeof(PlatformPathListGenerator));
+    *result.resources = {
+      query = query,
+    };
+    buf_cat_range(&result.resources.root, sizeof(root[0]), &root[0], &root[libc_strlen((:char const*)root)]);
+
+    result.output.root = result.resources.root;
+    fill_path_list_from_win32_find_data(&result.output, one_file, &result.resources.arena);
+
+    result.error = PathListError_None;
+  }
+  buf_free(query_str);
+	return result;
+}
+
+func fill_path_list_from_win32_find_data(list : PathList*, file : WIN32_FIND_DATAW, arena : MemoryArena*)
+{
+	if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    *list = {
+      root = list.root,
+      num_dirpaths = 1,
+      dirpaths = arena_alloc(arena, 1*sizeof(:uint8*))
+    };
+    list.dirpaths[0] = zutf8_from_zwchar_arena(file.cFileName, arena);
+  } else {
+    *list = {
+      root = list.root,
+      num_filepaths = 1,
+      filepaths = arena_alloc(arena, 1*sizeof(:uint8*))
+    };
+    list.filepaths[0] = zutf8_from_zwchar_arena(file.cFileName, arena);
+  }
+}
+
+func platform_next_paths(generator : PathListGenerator*)
+{
+  one_file : WIN32_FIND_DATAW;
+  if (!FindNextFileW(generator.resources.query, &one_file)) {
+    generator.error = PathListError_PastTheEnd;
+    return;
+  }
+  arena_reset(&generator.resources.arena);
+  generator.output.root = generator.resources.root;
+  fill_path_list_from_win32_find_data(&generator.output, one_file, &generator.resources.arena);
+}
+
+func platform_free_generator(generator : PathListGenerator*)
+{
+  if (!generator.resources) { return; }
+  buf_free(generator.resources.root);
+  arena_free(&generator.resources.arena);
+  libc_free(generator.resources);
+  generator.resources = NULL;
+}
+
+
+func zutf8_from_zwchar_arena(zwstring : wchar*, arena : MemoryArena*) : uint8*
+{
+	necessary_bytes := WideCharToMultiByte(CP_UTF8, 0, zwstring, -1, NULL, 0, NULL, NULL);
+	output : char* = arena_alloc(arena, necessary_bytes);
+  WideCharToMultiByte(CP_UTF8, 0, zwstring, -1, output, necessary_bytes, NULL, NULL);
+  return (:uint8*)output;
+}
+
+func buf_cat_wchars_from_zstr_ascii(buf : wchar**, ascii : char const*)
+{
+  while (*ascii) {
+    x : int16 = *ascii;
+    buf_push(buf, &x, sizeof(x));
+    ++ascii;
+  }
+  *buf = buf_fit(*buf, 2, 1);
+  (*buf)[buf_len((*buf))] = 0;
+}
+
+
+struct MemorySegment
+{
+  size : usize;
+  used : usize;
+  bytes : uint8[1];
+}
+
+struct MemoryArena
+{
+  segments_buf : MemorySegment**;
+}
+
+func arena_alloc(arena : MemoryArena*, size : usize) : void*
+{
+  available_size := buf_len(arena.segments_buf) == 0? 0 : arena_segment_available_size(arena.segments_buf[buf_len(arena.segments_buf)-1]);
+	segment : MemorySegment*;
+  if (size > available_size) {
+    segment_size := usize(2*1024*1024);
+    segment_size = size>segment_size? size:segment_size;
+    segment = libc_calloc(1, sizeof(MemorySegment) + segment_size - 1);
+    *segment = {
+      size = segment_size
+    };
+    buf_push(&arena.segments_buf, &segment, sizeof(segment));
+  } else {
+    segment = arena.segments_buf[buf_len(arena.segments_buf) - 1];
+  }
+  ptr := &segment.bytes[segment.used];
+  segment.used += size;
+  #assert(segment.used <= segment.size);
+  return ptr;
+}
+
+func arena_reset(arena : MemoryArena*)
+{
+	for (i:=0; i<buf_len(arena.segments_buf); i++) {
+		arena_segment_reset(arena.segments_buf[i]);
+  }
+}
+
+func arena_free(arena : MemoryArena*)
+{
+	for (i:=0; i<buf_len(arena.segments_buf); i++) {
+		libc_free(arena.segments_buf[i]);
+  }
+  buf_free(arena.segments_buf);
+  arena.segments_buf = NULL;
+}
+
+func arena_segment_reset(segment : MemorySegment*)
+{
+	segment.used = 0;
+}
+
+func arena_segment_available_size(segment : MemorySegment const*) : usize
+{
+	return segment.size - segment.used;
+}
+

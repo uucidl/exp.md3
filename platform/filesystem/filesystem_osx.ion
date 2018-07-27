@@ -1,0 +1,135 @@
+import platform.bsd { ... }
+import libc { calloc, free, memcpy, memset, printf, realloc }
+import containers { ... }
+
+struct PlatformPathListGenerator
+{
+  fd : int;
+  batch_mem : uint32[16*1024];
+}
+
+struct QueryResult
+{
+  size       : uint32;
+  attributes : AttributeSet;
+  error : uint32;
+  nameinfo : Attrreference;
+  objtype : FSObjType;
+  objtag : FSObjTag;
+  union {
+    struct {
+      file_totalsize : Off;
+      file_ioblocksize : uint32;
+    }
+  }
+  name       : char*;        // derived
+}
+
+func unpack_query_result(bytes : uint8 const*, num_bytes : usize) : QueryResult {
+  nameinfo := *((:Attrreference*)&bytes[28]);
+  return {
+    size = *((:uint32*)&bytes[0]),
+    attributes = *((:AttributeSet*)&bytes[4]),
+    error = *((:uint32*)&bytes[24]),
+    nameinfo = *((:Attrreference*)&bytes[28]),
+    objtype = *((:FSObjType*)&bytes[36]),
+    objtag = *((:FSObjType*)&bytes[40]),
+    file_totalsize = *((:Off*)&bytes[44]),
+    file_ioblocksize = *((:uint32*)&bytes[52]),
+    name = (:char*)&bytes[28 + nameinfo.attr_dataoffset],
+  };
+}
+  
+func make_attrlist_for_QueryResult() : AttrList
+{
+  return make_attrlist({
+      commonattr = ATTR_CMN_RETURNED_ATTRS | ATTR_CMN_ERROR | ATTR_CMN_NAME | ATTR_CMN_OBJTYPE | ATTR_CMN_OBJTAG,
+      fileattr = ATTR_FILE_TOTALSIZE | ATTR_FILE_IOBLOCKSIZE,
+  });
+}
+
+func make_macos_path_list_generator(root_fd : int) : PlatformPathListGenerator
+{
+  return {
+    fd = root_fd,
+  };
+}
+
+func platform_find_all_files(root : uint8 const*) : PathListGenerator
+{
+  root_path := (:char const*)root;
+  fd_or_error := open(root_path, O_RDONLY, 0);
+  if (fd_or_error < 0) {
+    return { error = PathListError_InvalidRoot };
+  }
+  #assert(fd_or_error >= 0);
+  root_fd := fd_or_error;
+  resources : PlatformPathListGenerator* = calloc(1, sizeof(PlatformPathListGenerator));
+  *resources = make_macos_path_list_generator(root_fd);
+  return {
+    resources = resources,
+  };
+}
+
+func platform_next_paths(generator : PathListGenerator*)
+{
+  #assert(generator.error == PathListError_None);
+  root_fd := generator.resources.fd;
+  query := make_attrlist_for_QueryResult();
+  options := uint64(FSOPT_NOFOLLOW | FSOPT_REPORT_FULLSIZE | FSOPT_PACK_INVAL_ATTRS);
+  num_entries_or_error := getattrlistbulk(root_fd, &query, &generator.resources.batch_mem[0], sizeof(generator.resources.batch_mem), options);
+  if (num_entries_or_error < 0) {
+    #assert(errno != EFAULT);
+    #assert(errno != ERANGE);
+    #assert(errno != EINVAL);
+    generator.error = (errno == EBADF || errno == ENOTDIR)
+	? PathListError_InvalidRoot
+        : PathListError_FileSystemError;
+    return;
+  }
+
+  #assert(num_entries_or_error >= 0);
+  num_entries := num_entries_or_error;
+  if (num_entries == 0) {
+    generator.error = PathListError_PastTheEnd;
+    return;
+  }
+
+  if (generator.output.filepaths) {
+    buf_hdr_mutable(generator.output.filepaths).size = 0;
+    generator.output.num_filepaths = 0;
+  }
+  if (generator.output.dirpaths) {
+    buf_hdr_mutable(generator.output.dirpaths).size = 0;
+    generator.output.num_dirpaths = 0;
+  }
+  
+  batch_offset := 0;
+  next_entry := (:uint8*)&generator.resources.batch_mem[0];
+  for (entries_idx := 0; entries_idx < num_entries; entries_idx++) {
+  remaining_num_bytes := (:uint8*)&generator.resources.batch_mem[sizeof(generator.resources.batch_mem)/sizeof(generator.resources.batch_mem[0])] - next_entry;
+    entry := unpack_query_result(next_entry, remaining_num_bytes);
+    if (entry.objtype == VREG) {
+       buf_push(&generator.output.filepaths, &entry.name, sizeof(entry.name));
+    } else {
+       buf_push(&generator.output.dirpaths, &entry.name, sizeof(entry.name));
+    }
+    next_entry += entry.size;
+  }
+  generator.output.num_filepaths = buf_len(generator.output.filepaths);
+  generator.output.num_dirpaths = buf_len(generator.output.dirpaths);
+}
+
+func platform_free_generator(generator : PathListGenerator*)
+{
+  buf_free(generator.output.filepaths);
+  buf_free(generator.output.dirpaths);
+  if (generator.resources)
+  {
+    close(generator.resources.fd);
+    free(generator.resources);
+    generator.resources = NULL;
+  }
+}
+
+

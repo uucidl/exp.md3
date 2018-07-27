@@ -1,0 +1,25 @@
+import platform.filesystem {...}
+import libc {...}
+
+func main(argc : int, argv: char**) : int {
+  for (argi := 1; argi < argc; argi++) {
+    paths := find_all_files((:uint8*)argv[argi]);
+    if (paths.error != PathListError_None) {
+      printf("Error displaying %s: %d\n", argv[argi], paths.error);
+    } else {
+      printf("Displaying content of %s\n", paths.output.root);
+      while (paths.error == PathListError_None) {
+        list := paths.output;
+        for (i:=0; i<list.num_dirpaths; i++) {
+          printf("[d]\t\"%s\"\n", (:char const*)list.dirpaths[i]);
+        }
+        for (i:=0; i<list.num_filepaths; i++) {
+          printf("[f]\t\"%s\"\n", (:char const*)list.filepaths[i]);
+        }
+        next_paths(&paths);
+      }
+    }
+    free_generator(&paths);
+  }
+  return 0;
+}

@@ -1,0 +1,3 @@
+@foreign("size_t")
+typedef bsd_size = ulong;
+#static_assert(sizeof(bsd_size)==8)
