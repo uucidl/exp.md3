@@ -2,6 +2,7 @@
 
 enum LocationKind
 {
+    LOCATION_KIND_NULL,
     LOCATION_KIND_PARAM_I,
     LOCATION_KIND_LOCAL_I,
 }
@@ -17,6 +18,7 @@ struct Location
 
 enum LiteralKind
 {
+    LITERAL_KIND_NULL,
     LITERAL_KIND_INTEGER,
     LITERAL_KIND_FLOAT,
     LITERAL_KIND_STRING,
@@ -29,11 +31,12 @@ struct Literal
         integer: int64;
         real: double;
         string: char const*;
-    };
+    }
 }
 
 enum OperandKind
 {
+    OPERAND_KIND_NULL,
     OPERAND_KIND_LOCATION,
     OPERAND_KIND_LITERAL,
 }
@@ -49,6 +52,7 @@ struct Operand
 
 enum ControlLabelKind
 {
+    CONTROL_LABEL_KIND_NULL,
     CONTROL_LABEL_KIND_RETURN,
     CONTROL_LABEL_KIND_BLOCK_LABEL,
 }
@@ -71,6 +75,7 @@ struct CGEnvironment
 
 enum CGDataDestinationKind
 {
+    DATA_DESTINATION_KIND_NULL,
     DATA_DESTINATION_KIND_EFFECT,
     DATA_DESTINATION_KIND_LOCATION,
 }
@@ -98,47 +103,59 @@ struct CGDestination
 func statement_destination(label: Label) : CGDestination
 {
     return CGDestination{
-        data.kind = DATA_DESTINATION_KIND_EFFECT,
-        control.choices = { label },
-        control.num_choices = 1,
-    }
+        data = { kind = DATA_DESTINATION_KIND_EFFECT },
+        control = { 
+            choices = { label },
+            num_choices = 1,
+        }
+    };
 }
 
 func value_destination(location: Location, label: Label) : CGDestination
 {
     return CGDestination{
-        data.kind = DATA_DESTINATION_KIND_LOCATION,
-        data.location = location,
-        control.choices = { label },
-        control.num_choices = 1,
-    }
+        data = {
+            kind = DATA_DESTINATION_KIND_LOCATION,
+            location = location,
+        },
+        control = {
+            choices = { label },
+            num_choices = 1,
+        }
+    };
 }
 
 func test_statement_destination(true_label: Label, false_label: Label) : CGDestination
 {
     return CGDestination{
-        data.kind = DATA_DESTINATION_KIND_EFFECT,
-        control.choices = { true_label, false_label },
-        control.num_choices = 2,
-    }
+        data = { kind = DATA_DESTINATION_KIND_EFFECT, },
+        control = {
+            choices = { true_label, false_label },
+            num_choices = 2,
+        }
+    };
 }
 
 func test_expression_destination(location: Location, true_label: Label, false_label: Label) : CGDestination
 {
     return CGDestination{
-        data.kind = DATA_DESTINATION_KIND_LOCATION,
-        data.location = location,
-        control.choices = { true_label, false_label },
-        control.num_choices = 2,
-    }
+        data = {
+            kind = DATA_DESTINATION_KIND_LOCATION,
+            location = location
+        },
+        control = {
+            choices = { true_label, false_label },
+            num_choices = 2,
+        },
+    };
 }
 
 func func_destination() : CGDestination
 {
     return CGDestination{
-        data.kind = DATA_DESTINATION_KIND_EFFECT,
-        control.choices = { kind = CONTROL_LABEL_KIND_RETURN },
-    }
+        data = { kind = DATA_DESTINATION_KIND_EFFECT, },
+        control = { choices = { kind = CONTROL_LABEL_KIND_RETURN } },
+    };
 }
 
 func generate_code(expr: Expr, env: CGEnvironment, destination: CGDestination, code: *CodeBuffer);
