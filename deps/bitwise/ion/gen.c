@@ -216,6 +216,9 @@ char *type_to_cdecl(Type *type, const char *str) {
     case TYPE_PTR:
         return type_to_cdecl(type->base, cdecl_paren(strf("*%s", str), *str));
     case TYPE_CONST:
+        if (type->base->kind == TYPE_ARRAY) {
+            return type_to_cdecl(type->base, str);
+        }
         return type_to_cdecl(type->base, strf("const %s", cdecl_paren(str, *str)));
     case TYPE_ARRAY:
         if (type->num_elems == 0) {
