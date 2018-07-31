@@ -1,0 +1,7 @@
+import libc
+
+func xcalloc(num_elems: usize, elem_size: usize) : void* {
+    res := libc.calloc(num_elems, elem_size);
+    #assert(res);
+    return res;
+}

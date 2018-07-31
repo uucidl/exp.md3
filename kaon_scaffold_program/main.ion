@@ -4,6 +4,20 @@ import kaon.props {
     var_init,
     g_varsys,
 }
+import kaon.res {
+    kaon_res=Resources,
+    res_init,
+    res_shutdown,
+}
+import kaon.ui {
+    ui_ctx,
+    ui_begin,
+    ui_end,
+    ui_panel,
+}
+import kaon {
+    Sys,
+}
 import noir
 
 import kaon.props { kaon_cmd_run = cmd_run }
@@ -14,16 +28,74 @@ func main(argc: int, argv: char **) : int
     noir.app.window.size = { x = 800, y = 600 };
 
     if (!noir.app_init()) { noir.print_and_clear_error(); }
+    sys := Sys{
+        noir = &noir.app,
+    };
 
     cmd_init(&g_cmdsys);
     var_init(&g_varsys);
+    res : kaon_res;
+    res_init(&res, &{});
 
     // test: show list of commands:
     kaon_cmd_run(&g_cmdsys, 1, &{ "cmdlist" });
     kaon_cmd_run(&g_cmdsys, 1, &{ "varlist" });
 
+    ctx := ui_ctx{
+        sys = &sys,
+        res = &res,
+    };
+
     while (noir.app_update()) {
         // do something
+
+        ui_begin(&ctx);
+        win := ui_panel{box=ctx.root.box};
+        ui_window(&ctx, &win, &ctx.root);
+        ui_end(&ctx);
+
     }
+
+    res_shutdown(&res);
+
     return 0;
+}
+
+func ui_window(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
+{
+    /*
+    ui_panel_begin(ctx, pan, parent); {
+        const spacing = 6;
+        const menu_pad = 8;
+        const main_pad = 5;
+        const tool_pad = 4;
+
+        xf := res_font(ctx.res);
+        small_icon_size := res_icon_dim_size(ICON_DIM_SMALL);
+        norm_icon_size := res_icon_dim_size(ICON_DIM_NORMAL);
+
+        /* menu */
+        menu: ui_panel;
+        menu_height := max_long(xf.h, small_icon_size) + menu_pad;
+        res_active_icon_dimension(ctx.res, ICON_DIM_SMALL);
+        ui_anchor_top_height(&menu.box, pan.box.top + main_pad, menu_height);
+        ui_anchor_left_right(&menu.box, pan.box.left + main_pad,
+            pan.box.right - main_pad);
+        ui_menu(ctx, &menu, pan);
+
+        /* tool */
+        struct ui_panel tool = {0};
+        const int tool_height = xf.h + norm_icon_size + tool_pad;
+        res_active_icon_dimension(ctx.res, ICON_DIM_NORMAL);
+        ui_anchor_top_height(&tool.box, menu.box.bottom + spacing, tool_height);
+        ui_anchor_left_right(&tool.box, menu.box.left, menu.box.right);
+        ui_tool(ctx, &tool, pan);
+
+        /* content */
+        struct ui_panel content = {0};
+        ui_anchor_left_right(&content.box, tool.box.left, tool.box.right);
+        ui_anchor_top_bottom(&content.box, tool.box.bottom + spacing, pan.box.bottom - main_pad);
+        ui_content(ctx, &content, pan);
+    } ui_panel_end(pan);
+    */
 }

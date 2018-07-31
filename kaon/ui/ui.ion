@@ -1,0 +1,199 @@
+import kaon { Sys }
+import kaon.res { 
+    FONT_DEFAULT,
+    Resources,
+    DrawableImage,
+    DrawableFont,
+    res_activate_font,
+    res_font,
+}
+import kaon.canvas {...}
+import kaon.utils {...}
+
+struct ui_ctx {
+    /* systems */
+    sys: Sys*;
+    res: Resources*;
+    /* state */
+    ids: ui_id_stk;
+    layout: ui_layout;
+    clip: scissor_rect;
+    popup: ui_popup;
+    disabled: bool;
+    activate_next: bool;
+    seq: uint;
+    /* tree */
+    root: ui_panel;
+    active: ui_id;
+    origin: ui_id;
+    hot: ui_id;
+}
+
+const UI_ID_STACK_DEPTH = 256;
+
+struct ui_id_stk {
+    top: int;
+    stk: ui_id[UI_ID_STACK_DEPTH];
+}
+
+struct ui_id {
+    lo, hi: uintptr;
+}
+
+enum ui_layout {
+    UI_LAYOUT_STRETCH,
+    UI_LAYOUT_FIT
+}
+
+struct scissor_rect {
+    x,y,w,h: int;
+}
+
+struct ui_popup {
+    active: bool;
+    type: ui_popup_type;
+    x,y,w,h: int;
+    clip: scissor_rect;
+    id: ui_id;
+    surf: Canvas*;
+    old: Canvas*;
+    seq: uint;
+}
+
+enum ui_popup_type {
+    UI_POPUP_BLOCKING,
+    UI_POPUP_NON_BLOCKING,
+}
+
+struct ui_panel {
+    parent: ui_panel*;
+    id: ui_id;
+    box: ui_box;
+    max_x, max_y: int;
+
+    state: ui_state;
+    unselectable, focusable: bool;
+
+    /* state */
+    doubled, hovered, entered, exited, clicked, pressed, down, released, drag_begin, dragged, drag_end, scrolled: bool;
+}
+
+struct ui_box {
+    left, top, right, bottom: int;
+    width, height: int;
+    center_x, center_y: int;
+}
+
+enum ui_state {
+    UI_NORMAL,
+    UI_FOCUSED,
+    UI_DISABLED,
+}
+
+func ui_begin(ctx: ui_ctx*) : ui_panel*
+{
+    sys := ctx.sys;
+    res_activate_font(ctx.res, FONT_DEFAULT);
+    ctx.layout = UI_LAYOUT_STRETCH;
+    ctx.disabled = false;
+    ctx.seq += 1;
+
+    /* reset IDs */
+    ctx.ids.top = 1;
+    ctx.ids.stk[0].lo = 0;
+    ctx.ids.stk[0].hi = 0;
+
+    /* reset surface */
+    canvas_identity(sys.surf);
+    canvas_line_style(sys.surf, XLINE_SOLID);
+    canvas_line_thickness(sys.surf, 1);
+    canvas_color_background(sys.surf, Color{r=212,g=208,b=200});
+    canvas_color(sys.surf, Color{});
+    canvas_font(sys.surf, res_font(ctx.res));
+
+    /* tree */
+    pan := &ctx.root;
+    pan.id = ui_gen_id(&ctx.ids);
+    ctx.root.parent = 0;
+
+    /* input */
+    if (sys.noir.mouse.left_button.pressed) {
+        ctx.origin = ctx.hot;
+        ctx.active = ctx.origin;
+    }
+    if (sys.noir.mouse.left_button.released) {
+        ctx.origin = ctx.root.id;
+    }
+
+    /* root */
+    window := &sys.noir.window;
+    ui_anchor_left_width(&pan.box, 0, window.size.x);
+    ui_anchor_top_height(&pan.box, 0, window.size.y);
+    if (!ctx.popup.active) {
+        ui_panel_hot(ctx, pan);
+    } else {
+        pan.hovered = false;
+    }
+    canvas_scissor(sys.surf, 0, 0, window.size.x, window.size.y);
+    ctx.clip = scissor_rect{x=0, y=0, w=window.size.x, h=window.size.y};
+    return &ctx.root;
+}
+
+func ui_end(ctx: ui_ctx*)
+{
+    p := &ctx.popup;
+    if (!p.active || p.seq != ctx.seq) {
+        p.active = false;
+        return;
+    }
+    sys := ctx.sys;
+    canvas_blit(sys.surf, p.surf, p.x, p.y, 0,0, p.w, p.h);
+}
+
+func ui_gen_id(s: ui_id_stk*) : ui_id
+{
+    #assert(s && s.top);
+    entry := &s.stk[s.top-1];
+    entry.lo++;
+    return ui_id {
+        lo = entry.lo,
+        hi = entry.hi,
+    };
+}
+
+func ui_anchor_left_width(b: ui_box*, left: int, width: int)
+{
+    #assert(b);
+    if (!b) { return; }
+    b.left = left;
+    b.width = width;
+    b.right = b.left + width;
+    b.center_x = b.left + (b.width/2);
+}
+
+func ui_anchor_top_height(b: ui_box*, top: int, height: int)
+{
+    #assert(b);
+    if (!b) { return; }
+    b.top = top;
+    b.height = height;
+    b.bottom = top + height;
+    b.center_y = b.top + (b.height/2);
+}
+
+func ui_panel_hot(ctx: ui_ctx*, p: ui_panel*)
+{
+    #assert(ctx && p);
+    s := ctx.sys.noir;
+    mx := s.mouse.pos.x;
+    my := s.mouse.pos.y;
+    b := &p.box;
+
+    if (p.unselectable) { return; }
+    if (p.parent && !p.parent.hovered) { return; }
+    if (!inbox(mx,my, b.left,b.top,b.width,b.height)) {
+        return;
+    }
+    p.hovered = true;
+    ctx.hot = p.id;
+}

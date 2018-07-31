@@ -1,0 +1,3 @@
+func inbox(px: int, py: int, x: int, y: int, w: int, h: int) : bool {
+    return between_long(px,x,x+w) && between_long(py,y,y+h);
+}

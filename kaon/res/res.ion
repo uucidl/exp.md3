@@ -1,0 +1,156 @@
+import kaon.canvas {
+    DrawableFont,
+    DrawableImage,
+}
+import kaon.utils {...}
+    
+import codecs {
+    codecs_Image = Image,
+}
+import libc
+
+enum font_ids {
+    FONT_DEFAULT,
+}
+
+struct Resources {
+    def: resources_def const*;
+    imgs: DrawableImage**;
+    img_cnt: int;
+    fnts: DrawableFont**;
+    fnt_cnt: int;
+
+    /* runtime */
+    src: res_source;
+    cur_img: DrawableImage const*;
+    cur_fnt: DrawableFont*;
+    cur_icon: icon_def const*;
+    cur_icon_dim : icon_dimensions;
+}
+
+struct resources_def {
+    img: LoadedImage const*;
+    img_cnt: int;
+    ico: icon_def const*;
+    ico_cnt: int;
+    fnt: zstr*;
+    fnt_cnt: int;
+}
+
+// @note @stubs to replace X11 stuff
+typedef LoadedImage = codecs_Image;
+
+enum icon_dimensions {
+    ICON_DIM_SMALL,
+    ICON_DIM_NORMAL,
+    ICON_DIM_BIG,
+    //...
+    ICON_DIM_COUNT,
+}
+
+struct icon_def {
+    dim : int[ICON_DIM_COUNT];
+}
+
+enum res_source {
+    RES_SOURCE_ICON,
+    RES_SOURCE_IMG,
+}
+
+enum ICON_TYPE {
+    ICON_NULL,
+    ICON_COMPUTER,
+}
+
+func res_init(res: Resources*, defs : resources_def const*)
+{
+    *res = {
+        img_cnt = defs.img_cnt,
+        fnt_cnt = defs.fnt_cnt,
+        def = defs,
+    };
+    res.imgs = xcalloc(res.img_cnt, sizeof(res.imgs[0]));
+    res.fnts = xcalloc(res.fnt_cnt, sizeof(res.fnts[0]));
+
+    for (i:=0; i<res.img_cnt; i++) {
+        res.imgs[i] = NULL; // @todo @platform do load the image
+    }
+    for (i:=0; i<res.fnt_cnt; i++) {
+        res.fnts[i] = NULL; // @todo @platform do load the font
+    }
+    res.cur_fnt = res.fnts[0];
+    res.cur_icon = &defs.ico[ICON_COMPUTER];
+    res.cur_icon_dim = ICON_DIM_SMALL;
+}
+
+func res_shutdown(res: Resources*)
+{
+    for (i:=0; i<res.img_cnt; i++) {
+        libc.free(res.imgs[i]);
+    }
+    for (i:=0; i<res.fnt_cnt; i++) {
+        libc.free(res.fnts[i]);
+    }
+    libc.free(res.imgs);
+    libc.free(res.fnts);
+    *res = {};
+}
+
+func res_activate_icon(res: Resources*, id: int)
+{
+    #assert(between_long(id, 0, res.def.ico_cnt - 1));
+    res.cur_icon = &res.def.ico[id];
+    res.src = RES_SOURCE_ICON;
+}
+
+func res_activate_font(res: Resources*, id: int)
+{
+    #assert(between_long(id, 0, res.fnt_cnt - 1));
+    res.cur_fnt = res.fnts[id];
+}
+
+func res_active_icon_dimension(res: Resources*, dim: icon_dimensions)
+{
+    res.cur_icon_dim = dim;
+}
+
+func res_activate_img(res: Resources*, id: int)
+{
+    res.cur_img = res_img(res, id);
+    res.src = RES_SOURCE_IMG;
+}
+
+func res_img(res: Resources*, id: int) : DrawableImage const*
+{
+    #assert(between_long(id, 0, res.img_cnt - 1));
+    return res.imgs[id];
+}
+
+func res_font(res: Resources*) : DrawableFont const*
+{
+    return res.cur_fnt;
+}
+
+func res_icon(res: Resources*) : DrawableImage const*
+{
+    switch (res.src) {
+    default: #assert(false); return 0;
+    case RES_SOURCE_IMG: return res.cur_img;
+    case RES_SOURCE_ICON: {
+        dim := res.cur_icon_dim;
+        icon := res.cur_icon;
+        img_id := icon.dim[dim];
+        return res_img(res, img_id);
+    }
+    }
+}
+
+func res_icon_dim_size(dim : icon_dimensions) : int
+{
+    size_from_dim : int[ICON_DIM_COUNT] = {
+        [ICON_DIM_SMALL] = 16,
+        [ICON_DIM_NORMAL] = 32,
+        [ICON_DIM_BIG] = 48,
+    };
+    return size_from_dim[dim];
+}

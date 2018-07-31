@@ -1,0 +1,10 @@
+import .canvas {
+    Canvas
+}
+
+import noir { noir_App = App }
+
+struct Sys {
+    noir: noir_App*;
+    surf: Canvas*;
+}
