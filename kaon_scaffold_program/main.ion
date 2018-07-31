@@ -1,0 +1,29 @@
+import kaon.props {
+    cmd_init,
+    g_cmdsys,
+    var_init,
+    g_varsys,
+}
+import noir
+
+import kaon.props { kaon_cmd_run = cmd_run }
+
+func main(argc: int, argv: char **) : int
+{
+    noir.app.window.title = "Kaon";
+    noir.app.window.size = { x = 800, y = 600 };
+
+    if (!noir.app_init()) { noir.print_and_clear_error(); }
+
+    cmd_init(&g_cmdsys);
+    var_init(&g_varsys);
+
+    // test: show list of commands:
+    kaon_cmd_run(&g_cmdsys, 1, &{ "cmdlist" });
+    kaon_cmd_run(&g_cmdsys, 1, &{ "varlist" });
+
+    while (noir.app_update()) {
+        // do something
+    }
+    return 0;
+}

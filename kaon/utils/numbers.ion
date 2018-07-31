@@ -1,0 +1,7 @@
+func min_usize(a: usize, b: usize) : usize { return a<b? a:b; }
+func between_long(x: long, a: long, b: long) : bool { return a<=x && x<=b; }
+func clamp_long(x : long, b0: long, b1: long) : long {
+    if (x < b0) { return b0; }
+    if (x > b1) { return b1; }
+    return x;
+}

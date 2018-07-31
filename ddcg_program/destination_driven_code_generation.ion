@@ -158,4 +158,5 @@ func func_destination() : CGDestination
     };
 }
 
-func generate_code(expr: Expr, env: CGEnvironment, destination: CGDestination, code: *CodeBuffer);
+func generate_code_for_expr(expr: Expr, env: CGEnvironment, destination: CGDestination, code: CodeBuffer*);
+func generate_code_for_function(func_decl : FuncDecl, env: CGEnvironment, destination: CGDestination, code: CodeBuffer*);

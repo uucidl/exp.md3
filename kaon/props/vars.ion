@@ -1,0 +1,200 @@
+import libc
+
+var g_varsys: varsys;
+
+func var_init(v: varsys*)
+{
+    *v = {};
+    cmd_add(&g_cmdsys, "varlist", varlist_f);
+    cmd_add(&g_cmdsys, "set", var_set_f);
+}
+
+struct varsys {
+    // @note This is a Map
+    vars: propvar*[MAX_VAR_HASH];
+    keys: ulong[MAX_VAR_HASH];
+    cnt: int;
+}
+
+struct propvar {
+    type: var_type;
+    flags: uint;
+    name: zstr;
+    print: zstr;
+    help: zstr;
+    val: property;
+}
+
+enum var_type {
+    VAR_INT,
+    VAR_FLOAT,
+    VAR_STRING,
+    VAR_ENUM
+}
+
+const VAR_FLAGS_ROM = 1<<0;
+const VAR_FLAGS_ARCHIVE = 1<<1;
+
+union property {
+    f: property_float;
+    i: property_int;
+    e: property_enum;
+    str: property_str;
+}
+
+struct property_float {
+    min, max: float;
+    val: float*;
+}
+
+struct property_int {
+    min, max: int;
+    val: int*;
+}
+
+struct property_str {
+    buf: char*;
+    len: int;
+}
+
+struct property_enum {
+    options: zstr*;
+    num: int;
+    sel: int*;
+}
+
+const MAX_VAR = 1024;
+const MAX_VAR_STR = 16;
+const MAX_VAR_HASH_SHIFT = 13;
+const MAX_VAR_HASH = (1 << MAX_VAR_HASH_SHIFT);
+const MAX_VAR_MASK = (MAX_VAR_HASH-1);
+
+@kaon_cmd
+func varlist_f(argc: int, argv: char**)
+{
+    match: zstr;
+    if (argc > 1) { match = argv[1]; }
+    x := 0;
+    n := 0;
+    for (i := 0; i < MAX_VAR_HASH; ++i) {
+        if (!g_varsys.vars[i]) { continue; }
+        propvar := g_varsys.vars[i];
+        n++;
+
+        if (match && !strfilter(propvar.name, match)) {
+            continue;
+        }
+
+        switch (propvar.type) {
+        case VAR_INT: libc.fprintf(libc.stdout, "%s \"%d\" ", propvar.name, *propvar.val.i.val);
+        case VAR_FLOAT: libc.fprintf(libc.stdout, "%s \"%.2f\" ", propvar.name, *propvar.val.f.val);
+        case VAR_STRING: libc.fprintf(libc.stdout, "%s \"%s\" ", propvar.name, propvar.val.str.buf);
+        case VAR_ENUM: {
+            sel := *propvar.val.e.sel;
+            libc.fprintf(libc.stdout, "%s \"%s\" ", propvar.name, propvar.val.e.options[sel]);
+        }
+        }
+
+        if (propvar.flags & VAR_FLAGS_ROM) { libc.fprintf(libc.stdout, "R"); }
+        if (propvar.flags & VAR_FLAGS_ARCHIVE) { libc.fprintf(libc.stdout, "A"); }
+        libc.fprintf(libc.stdout, "\n");
+        x++;
+    }
+    libc.fprintf(libc.stdout, "---------------------------\n");
+    libc.fprintf(libc.stdout, "%i total vars\n", n);
+    libc.fprintf(libc.stdout, "%i var indexes\n", x);
+    libc.fprintf(libc.stdout, "---------------------------\n");
+}
+
+// @todo @idea: auto-register cmds
+@kaon_cmd
+func var_set_f(argc: int, argv: char**)
+{
+    if (argc < 3) {
+        libc.fprintf(libc.stdout, "usage: set <name> <value>\n");
+        return;
+    }
+    var_set(&g_varsys, argv[1], argv[2]);
+}
+
+func hash_zstr(str: zstr, x: ulong) : ulong
+{
+    len := int(libc.strlen(str));
+    h := x;
+    for(i:= 0; i < len; ++i) {
+        h = ulong(65599) * h + uint8(str[i]);
+    }
+    return h^(h>>16);
+}
+
+func var_insert(v: varsys*, propvar: propvar*)
+{
+    id := hash_zstr(propvar.name, 0);
+    idx: ulong = id & MAX_VAR_MASK;
+    begin := idx;
+    do {
+        key := v.keys[idx];
+        if (key) { 
+            idx = (idx+1) & MAX_VAR_MASK;
+            continue; 
+        }
+        v.keys[idx] = id;
+        v.vars[idx] = propvar;
+        v.cnt++;
+        return;
+    } while (idx != begin);
+}
+
+func var_find(v: varsys*, name: zstr) : propvar const*
+{
+    id := hash_zstr(name, 0);
+    idx: uint = id & MAX_VAR_MASK;
+    begin := idx;
+    do {
+        key := v.keys[idx];
+        if (!key) { return 0; }
+        if (key == id) { return v.vars[idx]; }
+        idx = (idx+1) & MAX_VAR_MASK;
+    } while (idx != begin);
+    return 0;
+}
+
+func var_set(v: varsys*, name: zstr, value: zstr)
+{
+    propvar := var_find(v, name);
+    if (!propvar) { return; }
+    switch (propvar.type) {
+    case VAR_STRING: {
+        d_str := &propvar.val.str;
+        libc.strncpy(d_str.buf, value, d_str.len);
+        if (d_str.buf[d_str.len-1]) { /* truncate */ d_str.buf[d_str.len-1] = 0; }
+    }
+    case VAR_INT: {
+        ep: char*;
+        n := libc.strtol(value, &ep, 10);
+        if (*ep != '\0' || ep == value) { return; }
+        if (n < INT_MIN || n > INT_MAX) { return; }
+        *propvar.val.i.val = int(n);
+    }
+    case VAR_FLOAT: {
+        ep: char*;
+        d := libc.strtod(value, &ep);
+        if (*ep != '\0' || ep == value) { return; }
+        *propvar.val.f.val = float(d);
+    }
+    case VAR_ENUM: {
+        ep: char*;
+        n := libc.strtol(value, &ep, 10);
+        if (*ep != '\0' || ep == value) {
+            for (i:= 0; i < propvar.val.e.num; ++i) {
+                if (libc.strcmp(propvar.val.e.options[i], value) == 0) {
+                    *propvar.val.e.sel = i;
+                    return;
+                }
+            }
+        } else {
+            *propvar.val.e.sel = int(clamp_long(0, n, propvar.val.e.num-1));
+        }
+    }
+    }
+}

@@ -1,0 +1,62 @@
+const DTIME = 26;
+const WINDOW_WIDTH = 800;
+const WINDOW_HEIGHT = 600;
+
+func main(argc: int, argv: char **) : int
+{
+    /* platform */
+    struct sys sys = {0};
+    sys.win.title = "Kaon";
+    sys.win.w = WINDOW_WIDTH;
+    sys.win.h = WINDOW_HEIGHT;
+    sys.time.min_frame = DTIME;
+    sys_init(&sys);
+
+    /* con */
+    cmd_init(&g_cmdsys);
+    var_init(&g_varsys);
+
+    /* resources */
+    struct res res = {0};
+    res_init(&res, &sys, &app_resources_def);
+
+    /* ui */
+    struct ui_ctx ctx = {0};
+    ctx.sys = &sys;
+    ctx.res = &res;
+
+    /* filesystem */
+    const char *home = getenv("HOME");
+    fs_load_fullpath(home, &app_tree_arena);
+    dir_load_files(app_dir_cur, &app_dir_arena);
+    undo_push(app_dir_cur);
+
+    /* var */
+    var_insert(&g_varsys, &g_var_icon_size);
+    var_insert(&g_varsys, &g_var_dir_view);
+    var_insert(&g_varsys, &g_var_dir_layout);
+    cmd_exec("test.conf");
+
+    /* application */
+    while (!sys.quit) {
+        sys_poll(&sys);
+        xs_clear(sys.surf, xc_rgb(212,208,200));
+
+        ui_begin(&ctx);
+        struct ui_panel win = {.box = ctx.root.box};
+        ui_window(&ctx, &win, &ctx.root);
+        ui_end(&ctx);
+
+        sys_push(&sys);
+    }
+    arena_free(&app_tree_arena);
+    arena_free(&app_tmp_arena);
+    arena_free(&app_dir_arena);
+    buf_free(app_cur_dir_content);
+
+    /* shutdown */
+    res_shutdown(&res, &sys);
+    sys_shutdown(&sys);
+    return 0;
+}
+

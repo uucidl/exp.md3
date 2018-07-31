@@ -1,0 +1,174 @@
+const UTF_SIZ = 4;
+const UTF_INVALID = 0xFFFD;
+
+var utfbyte: uint8 const[UTF_SIZ+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
+var utfmask: uint8 const[UTF_SIZ+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
+var utfmin: long const[UTF_SIZ+1] = {0, 0, 0x80, 0x800, 0x10000};
+var utfmax: long const[UTF_SIZ+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
+
+func is_utf8(c: uint8) : bool { return (c & 0xC0) != 0x80; }
+
+func utf8_validate(u: long*, i: int) : int
+{
+    if (!u) { return 0; }
+    if (!between_long(*u, utfmin[i], utfmax[i]) ||
+         between_long(*u, 0xD800, 0xDFFF)) {
+        *u = UTF_INVALID;
+    }
+    for (i = 1; *u > utfmax[i]; ++i) {
+        // just for increment
+    }
+    return i;
+}
+func utf8_decode_byte(c: char, i: int*) : uint
+{
+    if (!i) { return 0; }
+    len_utfmask := sizeof(utfmask)/sizeof(utfmask[0]);
+    for (*i = 0; *i < len_utfmask; ++(*i)) {
+        if ((uint8(c) & utfmask[*i]) == utfbyte[*i]) {
+            return uint8(c & ~utfmask[*i]);
+        }
+    }
+    return 0;
+}
+
+func utf8_decode(c: zstr, u: long*, clen: int) : int
+{
+
+    if (!c || !u) { return 0; }
+    if (!clen) { return 0; }
+    *u = UTF_INVALID;
+
+    len: int;
+    udecoded := utf8_decode_byte(c[0], &len);
+    if (!between_long(len, 1, UTF_SIZ)) {
+        return 1; 
+    }
+
+    i: int = 1;
+    while (i < clen && i < len) {
+        type: int;
+        udecoded = (udecoded << 6) | utf8_decode_byte(c[i], &type);
+        if (type != 0) { 
+            return i;
+        }
+        ++i;
+    }
+    if (i < len) {
+        return 0;
+    }
+    *u = udecoded;
+    utf8_validate(u, len);
+    return len;
+}
+
+func utf8_encode_byte(u: long, i: int) : char
+{
+    return char(utfbyte[i] | (uint8(u) & ~utfmask[i]));
+}
+
+func utf8_encode(u: long, c: char*, clen: int) : int
+{
+    len := utf8_validate(&u, 0);
+    if (clen < len || !len || len > UTF_SIZ) {
+        return 0;
+    }
+
+    for (i := len - 1; i != 0; --i) {
+        c[i] = utf8_encode_byte(u, 0);
+        u >>= 6;
+    }
+    c[0] = utf8_encode_byte(u, len);
+    return len;
+}
+func utf8_dec(b: zstr, e: zstr) : zstr
+{
+    while (e > b) {
+        c := *(--e);
+        if (is_utf8(c)) { return e; }
+    }
+    return 0;
+}
+
+struct utf8_iter {
+    error: int;
+    rune: long;
+    rune_len: int;
+    rune_begin, rune_end: zstr;
+
+    /* statical */
+    next, prev, eof: zstr;
+}
+
+func utf8_begin(it: utf8_iter*, str: zstr, end: zstr)
+{
+    *it = {
+        eof = end ? end: str + libc.strlen(str),
+        next = str,
+    };
+    it.prev = it.eof;
+}
+
+func utf8_next(it: utf8_iter*) : bool
+{
+    if (it.next >= it.eof) { return false; }
+    it.rune_begin = it.next;
+    it.rune_len = utf8_decode(it.rune_begin, &it.rune, int(it.eof - it.rune_begin));
+    it.rune_end = it.rune_begin + it.rune_len;
+    it.next = (it.rune_end >= it.eof) ? it.eof: it.rune_end;
+    if (it.rune == UTF_INVALID) {
+        it.error = UTF_INVALID;
+        return false;
+    }
+    return true;
+}
+
+func utf8_prev(it: utf8_iter*) : bool
+{
+    if (it.prev <= it.next) { return false; }
+    it.rune_begin = utf8_dec(it.next, it.prev);
+    if (!it.rune_begin) { return false; }
+    it.rune_len = utf8_decode(it.rune_begin, &it.rune, int(it.eof - it.rune_begin));
+    it.rune_end = it.rune_begin + it.rune_len;
+    it.prev = it.rune_begin;
+    if (it.rune == UTF_INVALID) {
+        it.error = UTF_INVALID;
+        return false;
+    }
+    return true;
+}
+
+func utf8_len(str: zstr, end: zstr) : int
+{
+    n: int;
+    it: utf8_iter;
+    for (utf8_begin(&it, str, end); utf8_next(&it); n++) {
+        // just for counting
+    }
+    return n;
+}
+
+func utf8_at(it: utf8_iter*, str: zstr, end: zstr, idx: int) : int
+{
+    utf8_begin(it, str, end);
+    if (idx < 0) {
+        idx = -idx;
+        for (n := 0; utf8_prev(it); n++) {
+            if (n == idx) { return int(it.rune_begin - str); }
+        }
+    } else {
+        for (n := 0; utf8_next(it); n++) {
+            if (n == idx) { return int(it.rune_begin - str); }
+        }
+    }
+    return 0;
+}
+
+func utf8_has(str: zstr, rune: long) : bool
+{
+    iter: utf8_iter;
+    for (utf8_begin(&iter, str, 0); utf8_next(&iter); ) {
+        if (iter.rune == rune) { return true; }
+    }
+    return false;
+}

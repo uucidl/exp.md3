@@ -24,6 +24,9 @@ REM work in progress
 call :build_program_module docking_demo_program
 if %errorlevel% neq 0 exit /b 1
 
+call :build_program_module kaon_scaffold_program
+if %errorlevel% neq 0 exit /b 1
+
 xcopy /y /s "%HereDir%\assets" "%OutputDir%"\assets\
 xcopy /y /s "%HereDir%\deps\SDL2_win32\lib\x64\SDL2.dll" "%OutputDir%"
 exit /b 0

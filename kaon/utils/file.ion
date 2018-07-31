@@ -1,0 +1,25 @@
+import libc
+
+// zero-padded read of all the file
+func file_load(path : char const*, d_sz: usize*): char*
+{
+    *d_sz = 0;
+    result : char*;
+    file := libc.fopen(path, "rb");
+    if (file) {
+        libc.fseek(file, 0, libc.SEEK_END);
+        file_size := libc.ftell(file);
+        libc.fseek(file, 0, libc.SEEK_SET);
+        buffer := libc.calloc(file_size + 1, 1);
+        num_read := libc.fread(buffer, file_size, 1, file);
+        if (num_read == 0)
+        {
+            libc.free(buffer);
+            buffer = NULL;
+        }
+        *d_sz = file_size;
+        result = buffer;
+        libc.fclose(file);
+    }
+    return result;
+}

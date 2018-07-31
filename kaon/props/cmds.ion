@@ -1,0 +1,148 @@
+import kaon.utils {...}
+import libc
+
+const MAX_CMDS = 1024;
+const MAX_CMD_ARGS = 32;
+const MAX_CMD_LINE = 2*1024;
+
+var g_cmdsys: cmdsys;
+
+func cmd_init(c : cmdsys*)
+{
+    *c = {};
+    for (i := 0; i < MAX_CMDS; ++i) {
+        c.buf[i].next = i + 1;
+    }
+
+    c.cmds = MAX_CMDS;
+    cmd_add(c, "cmdlist", cmdlist_f);
+    cmd_add(c, "exec", exec_f);
+    cmd_add(c, "echo", echo_f);
+}
+
+func cmd_add(c: cmdsys *, name: char const *, f: cmd_f)
+{
+    for (i := c.cmds; i != MAX_CMDS; i = c.buf[i].next) {
+        if (libc.strcmp(c.buf[i].name, name) == 0) { return; }
+    }
+    if (c.freelist == MAX_CMDS) {
+        libc.fprintf(libc.stderr, "MAX_CMDS"); // @todo @error
+        return;
+    }
+    id := c.freelist;
+    cmd := c.buf + id;
+
+    c.freelist = cmd.next;
+    cmd.next = c.cmds;
+    c.cmds = id;
+
+    cmd.name = name;
+    cmd.exec = f;
+}
+
+struct cmdsys {
+    cmds: int;
+    freelist: int;
+    buf: cmd[MAX_CMDS];
+    cnt: int;
+}
+
+typedef cmd_f = func (argc: int, argv: char**);
+
+struct cmd {
+    name: char const *;
+    exec: cmd_f;
+    next: int;
+}
+
+func cmd_run(c: cmdsys*, argc: int, argv: char**)
+{
+    if (!argc) { return; }
+    for (i := c.cmds; i != MAX_CMDS; i = c.buf[i].next) {
+        cmd := c.buf + i;
+        if (libc.strcmp(cmd.name, argv[0]) == 0) {
+            cmd.exec(argc, argv);
+            return;
+        }
+    }
+}
+
+// @todo stubbed, I wonder if that's what was meant
+// unlikely since I see calls to strcmp elsewhere
+func strfilter(a: char const*, b: char const*) : bool {
+    return libc.strcmp(a, b) == 0;
+}
+
+@kaon_cmd
+func cmdlist_f(argc: int, argv: char**)
+{
+    n: int;
+    i: int;
+    match: char const *;
+    c := &g_cmdsys;
+    if (argc > 1) { match = argv[1]; }
+    for (i = c.cmds; i != MAX_CMDS; i = c.buf[i].next) {
+        cmd := c.buf + i;
+        if (!match || strfilter(cmd.name, match)) {
+            libc.fprintf(libc.stderr, "%s\n", cmd.name);
+            n++;
+        }
+    }
+    libc.fprintf(libc.stdout, "---------------------------");
+    libc.fprintf(libc.stdout, "\n%i total cmds\n", i);
+    libc.fprintf(libc.stdout, "%i cmd indexes\n", n);
+    libc.fprintf(libc.stdout, "---------------------------\n");
+}
+
+func cmd_exec_str(c: cmdsys*, cmdline: char const *)
+{
+    line_iter: str_iter;
+    for (str_tokens(&line_iter, cmdline, 0, "\n;"); str_token_next(&line_iter);) {
+        argv: char *[MAX_CMD_ARGS];
+        line: char[MAX_CMD_LINE];
+        argc: int;
+
+        len := min_usize(usize(line_iter.end - line_iter.begin), usize(sizeof(line)-1));
+        libc.memcpy(line, line_iter.begin, len);
+        line[len] = 0;
+
+        arg_iter: str_iter;
+        argline_first : zstr = line;
+        for (str_sep(&arg_iter, argline_first, 0, ' '); str_sep_next(&arg_iter);) {
+            line[arg_iter.end - argline_first] = 0;
+            if (argc >= MAX_CMD_ARGS-1) { break; }
+            argv[argc++] = line + (arg_iter.begin - argline_first);
+            arg_iter.next++;
+        }
+        argv[argc] = 0;
+        cmd_run(c, argc, argv);
+    }
+}
+
+func cmd_exec(filepath: char const *)
+{
+    sz: usize;
+    str:= file_load(filepath, &sz);
+    if (!str) { return; }
+    cmd_exec_str(&g_cmdsys, str);
+    libc.free(str);
+}
+
+@kaon_cmd
+func exec_f(argc: int, argv: char**)
+{
+    if (argc < 2) {
+        libc.printf("%s <filename>: execute a script file \n", argv[0]);
+        return;
+    }
+    cmd_exec(argv[1]);
+}
+
+@kaon_cmd
+func echo_f(argc: int, argv: char**)
+{
+    for (i := 1; i < argc; ++i) {
+        libc.fprintf(libc.stdout, "%s ", argv[i]);
+    }
+    libc.fprintf(libc.stdout, "\n");
+}

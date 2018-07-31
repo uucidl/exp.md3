@@ -1,0 +1,76 @@
+// immutable strings by default
+typedef zstr = char const *;
+
+struct file_def {
+    type: int;
+    suffix: zstr;
+    name: zstr;
+    icon: int;
+}
+enum file_info_state {
+    FILE_INFO_SETUP,
+    FILE_INFO_LOADED
+}
+struct file_info {
+    type: int;
+    state: file_info_state;
+    owner: directory *;
+    path: char *;
+    name: char *;
+    fullpath: char *;
+    extension: char *;
+    stat: stat;
+    is_dir: bool;
+}
+struct directory {
+    parent: directory *;
+    path: char *;
+    name: char *;
+    fullpath: char *;
+    depth, cnt: int;
+    dirs: directory **;
+    ui: ui_tree_node;
+}
+enum file_type {FILE_DEFAULT, FILE_FOLDER, FILE_TEXT, FILE_C_SOURCE,
+    FILE_CPP_SOURCE, FILE_HEADER, FILE_CPP_HEADER, FILE_PYTHON, FILE_RUBY,
+    FILE_JAVA, FILE_LUA, FILE_JS, FILE_HTML, FILE_CSS, FILE_MD, FILE_DOC, FILE_DOCX,
+    FILE_MP3, FILE_WAV, FILE_OGG, FILE_TTF, FILE_BMP, FILE_PNG, FILE_JPEG,
+    FILE_PCX, FILE_TGA, FILE_GIF, FILE_CHM, FILE_ZIP, FILE_RAR, FILE_GZ,
+    FILE_TAR, FILE_PDF, FILE_CNT
+}
+
+var app_file_defs : file_def const[] = {
+    [FILE_DEFAULT]      = {FILE_DEFAULT,    "",         "Unknown",      ICON_FILE_DEF},
+    [FILE_FOLDER]       = {FILE_FOLDER,     NULL,       "Folder",       ICON_DIR},
+    [FILE_TEXT]         = {FILE_TEXT,       "txt",      "Text",         ICON_FILE_TXT},
+    [FILE_C_SOURCE]     = {FILE_C_SOURCE,   "c",        "C Source",     ICON_FILE_TXT},
+    [FILE_CPP_SOURCE]   = {FILE_CPP_SOURCE, "cpp",      "C++ Source",   ICON_FILE_TXT},
+    [FILE_HEADER]       = {FILE_HEADER,     "h",        "C Header",     ICON_FILE_TXT},
+    [FILE_CPP_HEADER]   = {FILE_CPP_HEADER, "hpp",      "C++ Header",   ICON_FILE_TXT},
+    [FILE_PYTHON]       = {FILE_PYTHON,     "py",       "Python Script",ICON_FILE_TXT},
+    [FILE_RUBY]         = {FILE_RUBY,       "rby",      "Ruby Script",  ICON_FILE_TXT},
+    [FILE_JAVA]         = {FILE_JAVA,       "java",     "Java Source",  ICON_FILE_TXT},
+    [FILE_LUA]          = {FILE_LUA,        "lua",      "Lua Script",   ICON_FILE_TXT},
+    [FILE_JS]           = {FILE_JS,         "js",       "JavaScript",   ICON_FILE_TXT},
+    [FILE_HTML]         = {FILE_HTML,       "html",     "HTML",         ICON_FILE_TXT},
+    [FILE_CSS]          = {FILE_CSS,        "css",      "CSS",          ICON_FILE_TXT},
+    [FILE_MD]           = {FILE_MD,         "md",       "Markdown",     ICON_FILE_TXT},
+    [FILE_DOC]          = {FILE_DOC,        "doc",      "Document",     ICON_FILE_TXT},
+    [FILE_DOCX]         = {FILE_DOCX,       "docx",     "DocumentX",    ICON_FILE_TXT},
+    [FILE_MP3]          = {FILE_MP3,        "mp3",      "MP3",          ICON_FILE_SFX},
+    [FILE_WAV]          = {FILE_WAV,        "wav",      "WAV",          ICON_FILE_SFX},
+    [FILE_OGG]          = {FILE_OGG,        "ogg",      "OGG",          ICON_FILE_SFX},
+    [FILE_TTF]          = {FILE_TTF,        "ttf",      "TTF",          ICON_FILE_FNT},
+    [FILE_BMP]          = {FILE_BMP,        "bmp",      "BMP",          ICON_FILE_IMG},
+    [FILE_PNG]          = {FILE_PNG,        "png",      "PNG",          ICON_FILE_PNG},
+    [FILE_JPEG]         = {FILE_JPEG,       "jpg",      "JPEG",         ICON_FILE_JPG},
+    [FILE_PCX]          = {FILE_PCX,        "pcx",      "PCX",          ICON_FILE_PCX},
+    [FILE_TGA]          = {FILE_TGA,        "tga",      "TGA",          ICON_FILE_IMG},
+    [FILE_GIF]          = {FILE_GIF,        "gif",      "GIF",          ICON_FILE_GIF},
+    [FILE_CHM]          = {FILE_CHM,        "chm",      "Help",         ICON_FILE_CHM},
+    [FILE_ZIP]          = {FILE_ZIP,        "zip",      "Archive",      ICON_FILE_ZIP},
+    [FILE_RAR]          = {FILE_RAR,        "rar",      "Archive",      ICON_FILE_ZIP},
+    [FILE_GZ]           = {FILE_GZ,         "gz",       "Archive",      ICON_FILE_ZIP},
+    [FILE_TAR]          = {FILE_TAR,        "tar",      "Archive",      ICON_FILE_ZIP},
+    [FILE_PDF]          = {FILE_PDF,        "pdf",      "PDF",          ICON_FILE_PDF},
+};

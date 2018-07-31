@@ -1,0 +1,99 @@
+BIN = kaon
+
+CC = clang
+DCC = gcc
+CFLAGS = -std=c99 -pedantic -Wno-long-long
+DFLAGS = -D_POSIX_C_SOURCE=200809L
+CLFLAGS =
+CLIBS = -lX11
+
+SRC = main.c
+OBJ = $(SRC:.c=.o)
+
+.PHONY: clang
+clang: CFLAGS += -g -Weverything -Wno-missing-noreturn -Wno-covered-switch-default
+clang: CFLAGS += -Wno-padded -Wno-comma -Wno-missing-field-initializers -fwrapv
+clang: CFLAGS += -Wno-double-promotion -Wno-float-equal -Wno-switch -Wno-switch-enum
+clang: CFLAGS += -Wno-unused-function -Wno-unused-parameter -Wno-unused-macros
+clang: CFLAGS += -Wno-unused-local-typedef -Wno-missing-braces -Wno-format-nonliteral
+clang: CC = clang
+clang: $(BIN)
+
+.PHONY: gcc
+gcc: CFLAGS += -g -Wall -Wextra -Wformat-security -Wunreachable-code
+gcc: CFLAGS += -Winline -Wwrite-strings -Wdeprecated-declarations -fwrapv
+gcc: CFLAGS += -Wstrict-prototypes -Wold-style-definition -Wconversion
+gcc: CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
+gcc: CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wmissing-prototypes
+gcc: CFLAGS += -Wswitch-default -Wundef -Wno-unused -Wstrict-overflow=5 -Wsign-conversion
+gcc: CFLAGS += -Winit-self -Wstrict-aliasing -Wconversion -Wuninitialized
+gcc: CFLAGS += -Wswitch-enum -Winvalid-pch -Wbad-function-cast
+gcc: CFLAGS += -Wunsafe-loop-optimizations -Wjump-misses-init
+gcc: CFLAGS += -Wlogical-op -Wpacked -Wredundant-decls -Wnested-externs
+gcc: CFLAGS += -Wvla -Wuseless-cast -Wnull-dereference -Wrestrict -Wduplicated-branches
+gcc: CFLAGS += -Wduplicated-cond
+gcc: CC = gcc
+gcc: $(BIN)
+
+.PHONY: release
+release: CC = gcc
+release: CFLAGS += -O2 -DNDEBUG
+release: CFLAGS += -Wall -Wextra -Wformat-security -Wunreachable-code
+release: CFLAGS += -Winline -Wwrite-strings -Wdeprecated-declarations -fwrapv
+release: CFLAGS += -Wstrict-prototypes -Wold-style-definition -Wconversion
+release: CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
+release: CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wmissing-prototypes
+release: CFLAGS += -Wswitch-default -Wundef -Wno-unused -Wstrict-overflow=5 -Wsign-conversion
+release: CFLAGS += -Winit-self -Wstrict-aliasing -Wconversion -Wuninitialized
+release: CFLAGS += -Wswitch-enum -Winvalid-pch -Wbad-function-cast
+release: CFLAGS += -Wunsafe-loop-optimizations -Wjump-misses-init
+release: CFLAGS += -Wlogical-op -Wpacked -Wredundant-decls -Wnested-externs
+release: CFLAGS += -Wvla -Wuseless-cast -Wnull-dereference -Wrestrict -Wduplicated-branches
+release: CFLAGS += -Wduplicated-cond
+release: $(BIN)
+
+.PHONY: perf
+perf: CFLAGS += -pg -O2 -Wall -Wextra -Wformat-security -Wunreachable-code
+perf: CFLAGS += -Winline -Wwrite-strings -Wdeprecated-declarations
+perf: CFLAGS += -Wstrict-prototypes -Wold-style-definition -Wconversion
+perf: CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
+perf: CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wmissing-prototypes
+perf: CFLAGS += -Wswitch-default -Wundef -Wno-unused -Wstrict-overflow=5 -Wsign-conversion
+perf: CFLAGS += -Winit-self -Wstrict-aliasing -Wconversion -Wuninitialized
+perf: CFLAGS += -Wswitch-enum -Winvalid-pch -Wbad-function-cast -fstrict-aliasing
+perf: CFLAGS += -Wunsafe-loop-optimizations -Wjump-misses-init
+perf: CFLAGS += -Wlogical-op -Wpacked -Wredundant-decls -Wnested-externs
+perf: CFLAGS += -Wvla -Wuseless-cast -Wnull-dereference -Wrestrict -Wduplicated-branches
+perf: CFLAGS += -Wduplicated-cond
+perf: CC = gcc
+perf: $(BIN)
+
+.PHONY: asan
+asan: CFLAGS += -g -Weverything -Wno-missing-noreturn -Wno-covered-switch-default
+asan: CFLAGS += -Wno-padded -Wno-comma -Wno-missing-field-initializers
+asan: CFLAGS += -Wno-double-promotion -Wno-float-equal -Wno-switch -Wno-switch-enum
+asan: CFLAGS += -Wno-unused-function -Wno-unused-parameter -Wno-unused-macros
+asan: CFLAGS += -Wno-unused-local-typedef
+asan: CFLAGS += -fsanitize=address -fsanitize=undefined
+asan: CFLAGS += -fsanitize=alignment -fsanitize=bounds -fsanitize=enum
+asan: CFLAGS += -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
+asan: CFLAGS += -fsanitize=integer-divide-by-zero
+asan: CFLAGS += -fsanitize=nonnull-attribute -fsanitize=shift -fsanitize=unreachable
+asan: CFLAGS += -fsanitize=signed-integer-overflow
+asan: CC = clang
+asan: $(BIN)
+
+.PHONY: tcc
+tcc: CFLAGS += -g -Wall -Wunsupported -Wwrite-strings
+tcc: CC = tcc
+tcc: $(BIN)
+
+.PHONY: diag
+diag: CFLAGS += -g -v -Q -ftime-report
+diag: CC = clang
+diag: $(BIN)
+
+$(BIN):
+	@mkdir -p bin
+	rm -f bin/$(BIN) $(OBJS)
+	$(CC) $(SRC) $(INCLDIR) $(CFLAGS) $(DFLAGS) -o bin/$(BIN) $(LFLAGS) $(CLIBS)

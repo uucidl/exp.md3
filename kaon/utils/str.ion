@@ -1,0 +1,68 @@
+import libc
+
+typedef zstr = char const*;
+
+struct str_iter {
+    begin, end: zstr;
+    /* statical */
+    next, eof, delims: zstr;
+    sep: uint;
+}
+
+func str_sep(it: str_iter*, str:zstr, end: zstr, sep: uint)
+{
+    *it = {
+        eof = (!end) ? str + libc.strlen(str): end,
+        next = str,
+        sep = sep,
+    };
+}
+
+func str_sep_next(it: str_iter*) : bool
+{
+    if (it.next >= it.eof) { return false; }
+    it.begin = it.next;
+
+    iter: utf8_iter;
+    for (utf8_begin(&iter, it.next, it.eof); utf8_next(&iter); ) {
+        if (iter.rune != it.sep) { break; }
+        it.begin = iter.rune_end;
+    }
+    it.end = it.begin;
+    for (utf8_begin(&iter, it.end, it.eof); utf8_next(&iter); ) {
+        if (iter.rune == it.sep) { break; }
+        it.end = iter.rune_end;
+    }
+    if (it.begin == it.end) { return false; }
+    it.next = (it.end >= it.eof) ? it.eof: it.end;
+    return true;
+}
+
+func str_tokens(it: str_iter*, str: zstr, end: zstr, delims: zstr)
+{
+    *it = {
+        eof = (!end) ? str + libc.strlen(str): end,
+        delims = delims,
+        next = str,
+    };
+}
+
+func str_token_next(it: str_iter*) : bool
+{
+    iter: utf8_iter;
+    if (it.next >= it.eof) { return false; }
+
+    it.begin = it.next;
+    for (utf8_begin(&iter, it.begin, it.eof); utf8_next(&iter); ) {
+        if (!utf8_has(it.delims, iter.rune)) { break; }
+        it.begin = iter.rune_end;
+    }
+    it.end = it.begin;
+    for (utf8_begin(&iter, it.end, it.eof); utf8_next(&iter); ) {
+        if (utf8_has(it.delims, iter.rune)) { break; }
+        it.end = iter.rune_end;
+    }
+    if (it.begin == it.end) { return false; }
+    it.next = (it.end < it.eof) ? it.end: it.eof;
+    return true;
+}
