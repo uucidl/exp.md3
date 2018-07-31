@@ -1,4 +1,5 @@
 set -e
+[[ -d "output" ]] || mkdir -p "output"
 export IONHOME=$(pwd)/deps/bitwise/ion
 output/ion -os osx -arch x64 -o output/docking_demo_program.c \
   docking_demo_program
