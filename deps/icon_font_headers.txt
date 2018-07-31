@@ -1,0 +1,2 @@
+@url: https://github.com/juliettef/IconFontCppHeaders/archive/7759b52e45f09d8615e8ffcbaa1f22bbd0ff7cdf.zip
+@name: IconFontCppHeaders
