@@ -8,6 +8,9 @@ import kaon.res {
     kaon_res=Resources,
     res_init,
     res_shutdown,
+    resources_def,
+    font_ids,
+    FONT_DEFAULT,
 }
 import kaon.ui {
     ui_ctx,
@@ -35,7 +38,13 @@ func main(argc: int, argv: char **) : int
     cmd_init(&g_cmdsys);
     var_init(&g_varsys);
     res : kaon_res;
-    res_init(&res, &{});
+    app_fonts : char const*[] = {
+        [FONT_DEFAULT] = "arial.ttf",
+    };
+    res_init(&res, sys.surf, &{
+        fnt = app_fonts,
+        fnt_cnt = sizeof(app_fonts)/sizeof(app_fonts[0]),
+    });
 
     // test: show list of commands:
     kaon_cmd_run(&g_cmdsys, 1, &{ "cmdlist" });

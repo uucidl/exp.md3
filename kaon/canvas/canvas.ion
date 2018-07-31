@@ -1,3 +1,7 @@
+import kaon.utils { 
+    zstr,
+}
+
 enum xline_style {
     XLINE_SOLID,
     XLINE_DASHED
@@ -27,3 +31,7 @@ func canvas_color(canvas: Canvas*, argb: Color) {}
 func canvas_font(canvas: Canvas*, font: DrawableFont const*) {}
 func canvas_scissor(canvas: Canvas*, x: int, y: int, w: int, h: int) {}
 func canvas_blit(dest: Canvas*, src: Canvas*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
+func canvas_load_font_by_filepath(canvas: Canvas*, path: zstr) : DrawableFont* 
+{
+    return NULL;
+}

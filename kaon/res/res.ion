@@ -1,6 +1,8 @@
 import kaon.canvas {
     DrawableFont,
     DrawableImage,
+    Canvas,
+    canvas_load_font_by_filepath,
 }
 import kaon.utils {...}
     
@@ -62,7 +64,7 @@ enum ICON_TYPE {
     ICON_COMPUTER,
 }
 
-func res_init(res: Resources*, defs : resources_def const*)
+func res_init(res: Resources*, canvas: Canvas*, defs : resources_def const*)
 {
     *res = {
         img_cnt = defs.img_cnt,
@@ -76,7 +78,7 @@ func res_init(res: Resources*, defs : resources_def const*)
         res.imgs[i] = NULL; // @todo @platform do load the image
     }
     for (i:=0; i<res.fnt_cnt; i++) {
-        res.fnts[i] = NULL; // @todo @platform do load the font
+        res.fnts[i] = canvas_load_font_by_filepath(canvas, defs.fnt[i]);
     }
     res.cur_fnt = res.fnts[0];
     res.cur_icon = &defs.ico[ICON_COMPUTER];
