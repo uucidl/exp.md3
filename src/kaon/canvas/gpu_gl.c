@@ -55,11 +55,11 @@ void gpu_flush_commands(noir_App* noir_app, kaon_canvas_CanvasCommandQueue* queu
                 nvgBeginPath(vg);
                 nvgRect(vg, draw_rect->l, draw_rect->t, draw_rect->w, draw_rect->h);
                 if (draw_rect->flags & KAON_CANVAS_RECT_FLAGS_FILLED) {
-                    nvgFillColor(vg, nvgRGBA(255, draw_rect->fill_color.r, draw_rect->fill_color.g, draw_rect->fill_color.b));
+                    nvgFillColor(vg, nvgRGB(draw_rect->fill_color.r, draw_rect->fill_color.g, draw_rect->fill_color.b));
                     nvgFill(vg);
                 }
                 if (draw_rect->flags & KAON_CANVAS_RECT_FLAGS_STROKED) {
-                    nvgStrokeColor(vg, nvgRGBA(255, draw_rect->stroke_color.r, draw_rect->stroke_color.g, draw_rect->stroke_color.b));
+                    nvgStrokeColor(vg, nvgRGB(draw_rect->stroke_color.r, draw_rect->stroke_color.g, draw_rect->stroke_color.b));
                     nvgStroke(vg);
                 }
             } break;
@@ -68,7 +68,7 @@ void gpu_flush_commands(noir_App* noir_app, kaon_canvas_CanvasCommandQueue* queu
                 nvgBeginPath(vg);
                 nvgMoveTo(vg, command->draw_segment.x0, command->draw_segment.y0);
                 nvgLineTo(vg, command->draw_segment.x1, command->draw_segment.y1);
-                nvgStrokeColor(vg, nvgRGBA(255, command->draw_segment.color.r, command->draw_segment.color.g, command->draw_segment.color.b));
+                nvgStrokeColor(vg, nvgRGB(command->draw_segment.color.r, command->draw_segment.color.g, command->draw_segment.color.b));
                 nvgStrokeWidth(vg, command->draw_segment.width);
                 nvgStroke(vg);
             } break;
