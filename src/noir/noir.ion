@@ -100,6 +100,8 @@ func init_window(): bool {
     if (app.window.init_opengl) {
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+        // Macos does not support compatibility profiles
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
         glcontext := SDL_GL_CreateContext(sdl_window);
         if (!glcontext) {
             app.error = "OpenGL context creation failed";
