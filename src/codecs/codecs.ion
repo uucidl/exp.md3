@@ -1,5 +1,3 @@
-#foreign(header="stb_image.h")
-
 struct Image
 {
   num_channels : int;
@@ -27,4 +25,4 @@ func image_free(pixels : Image*)
   pixels = {};
 }
 
-#foreign(source="codecs.c")
+#foreign(header="stb_image.h", source="codecs.c")

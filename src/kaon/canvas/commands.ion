@@ -15,7 +15,14 @@ struct CanvasCommandDrawRect {
     fill_color: Color;
     stroke_color: Color;
 }
- 
+
+struct CanvasCommandDrawSegment {
+    x0, y0: int;
+    x1, y1: int;
+    width: int;
+    color: Color;
+}
+
 struct CanvasCommandScissorRect {
     l, t: int;
     w, h: int;
@@ -23,6 +30,7 @@ struct CanvasCommandScissorRect {
 
 enum CanvasCommandKind {
     COMMAND_DRAW_RECT,
+    COMMAND_DRAW_SEGMENT,
     COMMAND_SCISSOR_RECT,
 }
 
@@ -31,6 +39,7 @@ struct CanvasCommand
     kind: CanvasCommandKind;
     union {
         draw_rect: CanvasCommandDrawRect;
+        draw_segment: CanvasCommandDrawSegment;
         scissor_rect: CanvasCommandScissorRect;
     }
 }
@@ -40,6 +49,16 @@ func command_push_rect(queue: CanvasCommandQueue*, draw_rect: CanvasCommandDrawR
     command := CanvasCommand{
         kind = COMMAND_DRAW_RECT,
         draw_rect = draw_rect,
+    };
+    buf_push(&queue.commands, &command, sizeof(command));
+    queue.num_commands = buf_len(queue.commands);
+}
+
+func command_push_segment(queue: CanvasCommandQueue*, draw_segment: CanvasCommandDrawSegment)
+{
+    command := CanvasCommand{
+        kind = COMMAND_DRAW_SEGMENT,
+        draw_segment = draw_segment,
     };
     buf_push(&queue.commands, &command, sizeof(command));
     queue.num_commands = buf_len(queue.commands);

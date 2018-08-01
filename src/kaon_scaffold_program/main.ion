@@ -36,6 +36,7 @@ func main(argc: int, argv: char **) : int
 {
     noir.app.window.title = "Kaon";
     noir.app.window.size = { x = 800, y = 600 };
+    noir.app.window.init_opengl = true;
 
     if (!noir.app_init()) { noir.print_and_clear_error(); }
     sys := Sys{
@@ -79,7 +80,7 @@ func main(argc: int, argv: char **) : int
         win := ui_panel{box=ctx.root.box};
         app_window(&ctx, &win, &ctx.root);
         ui_end(&ctx);
-        canvas_flush(ctx.sys.surf);
+        canvas_flush(ctx.sys, ctx.sys.surf);
     }
 
     res_shutdown(&res, sys.surf);

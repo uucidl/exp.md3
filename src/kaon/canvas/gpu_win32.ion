@@ -1,0 +1,6 @@
+import noir { noir_App = App }
+
+@foreign("gpu_flush_commands")
+func gpu_flush(app: noir_App*, commands : CanvasCommandQueue*);
+
+#foreign(header="gpu_gl.h", source="gpu_gl.c")

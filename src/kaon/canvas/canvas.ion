@@ -2,6 +2,7 @@ import codecs { LoadedImage=Image }
 import kaon.utils { 
     zstr,
 }
+import kaon { Sys }
 
 import libc
 
@@ -11,7 +12,7 @@ enum xline_style {
 }
 
 struct Color {
-    a, r, g, b: char;
+    r, g, b: char;
 }
 
 struct Canvas {
@@ -71,7 +72,7 @@ func canvas_font(canvas: Canvas*, font: DrawableFont const*) {
 func canvas_fill_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {
     // @todo @incomplete r is not used
     command_push_rect(&canvas.commands, {
-            l=x, t=y, w=w, h=h, 
+            l=x+canvas.state.off.x, t=y+canvas.state.off.y, w=w, h=h, 
             flags=RECT_FLAGS_FILLED,
             fill_color=canvas.state.foreground.color,
     });
@@ -79,7 +80,7 @@ func canvas_fill_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {
 func canvas_stroke_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {
     // @todo @incomplete r is not used
     command_push_rect(&canvas.commands, {
-            l=x, t=y, w=w, h=h, 
+            l=x+canvas.state.off.x, t=y+canvas.state.off.y, w=w, h=h, 
             flags=RECT_FLAGS_STROKED,
             stroke_color=canvas.state.foreground.color,
     });
@@ -87,12 +88,19 @@ func canvas_stroke_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int)
 func canvas_scissor(canvas: Canvas*, x: int, y: int, w: int, h: int) {
     command_push_scissor_rect(&canvas.commands, {l=x, t=y, w=w, h=h});
 }
-func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {}
+func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {
+    command_push_segment(&canvas.commands, {
+        x0=x0, y0=y0, x1=x1, y1=y1,
+        width=canvas.state.line.thickness,
+        color=canvas.state.foreground.color
+    });
+}
 func canvas_blit_image(dest: Canvas*, img: DrawableImage const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
 func canvas_blit(dest: Canvas*, src: Canvas const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
 
-func canvas_flush(dest: Canvas*)
+func canvas_flush(sys: Sys*, dest: Canvas*)
 {
+    gpu_flush(sys.noir, &dest.commands);
     commands_free(&dest.commands);
 }
 

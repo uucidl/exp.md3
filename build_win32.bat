@@ -47,6 +47,8 @@ popd
 set O=%OutputDir%\%ProgramModuleName%.exe
 "%CLExe%" -Fe:"%O%" -Fo:"%ObjDir%\\" -I"%ObjDir%" "%ProgramModuleCFile%" ^
   -I"%HereDir%"\deps\SDL2_%Os%\include\ ^
+  -I"%HereDir%"\deps\nanovg\src ^
+  -I"%HereDir%"\deps\GL3\include ^
   %CLCommonFlags% ^
   -link -SUBSYSTEM:CONSOLE
 if %errorlevel% neq 0 exit /b 1

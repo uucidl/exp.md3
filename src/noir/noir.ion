@@ -96,6 +96,17 @@ func init_window(): bool {
         app.error = "Window creation failed";
         return false;
     }
+
+    if (app.window.init_opengl) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+        glcontext := SDL_GL_CreateContext(sdl_window);
+        if (!glcontext) {
+            app.error = "OpenGL context creation failed";
+            return false;
+        }
+        app.window.sdlgl = glcontext;
+    }
     app.window.sdl = sdl_window;
     app.window.synced_pos = app.window.pos;
     strncpy(app.window.synced_title, app.window.title, sizeof(app.window.synced_title) - 1);
@@ -253,6 +264,9 @@ func update_window() {
         }
     }
     app.window.synced_hidden = app.window.hidden;
+    if (app.window.sdlgl) {
+        SDL_GL_SwapWindow(app.window.sdl);
+    }
 }
 
 func update_audio() {
@@ -485,6 +499,7 @@ struct Window {
     synced_fullscreen: bool;
 
     sdl: SDL_Window*;
+    sdlgl: SDL_GLContext;
 }
 
 struct Display {
