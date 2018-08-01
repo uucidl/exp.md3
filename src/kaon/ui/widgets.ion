@@ -55,7 +55,7 @@ func ui_icon(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
     ui_panel_begin(ctx, pan, parent); {
         sys := ctx.sys;
         img := res_icon(ctx.res);
-        if (img) { canvas_blit_image(sys.surf, img, pan.box.left, pan.box.top, 0,0, img.w, img.h); }
+        if (img) { canvas_blit_image(sys.surf, img, pan.box.left, pan.box.top, img.w, img.h); }
     } ui_panel_end(pan);
 }
 

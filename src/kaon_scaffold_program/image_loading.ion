@@ -1,0 +1,27 @@
+struct EmbeddedImage
+{
+    w, h: int;
+    cmap: uint32 const*;
+    data: char const**;
+    none: uint32;
+}
+
+func kaon_load_embedded_image(def: EmbeddedImage) : LoadedImage
+{
+    result: LoadedImage;
+    result.width = def.w;
+    result.height = def.h;
+    result.num_channels = 4;
+    result.interleaved_channels = libc.calloc(result.width, result.height*4);
+    data : uint32* = (:uint32*)result.interleaved_channels;
+    for (y := 0; y < def.h; ++y) {
+        for (x := 0; x < def.w; ++x) {
+            sym := def.data[y][x];
+            dst := data + x + y * def.w;
+            col: uint32 = sym == ' '? def.none : def.cmap[sym];
+            *dst = 0xFF000000 | col;
+        }
+    }
+    return result;
+}
+

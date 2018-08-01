@@ -47,8 +47,8 @@ struct DrawableFont {
 }
 
 struct DrawableImage {
-    dummy: int;
     w, h: int;
+    gpu_handle: GPUImageHandle;
 }
 
 func canvas_identity(canvas: Canvas*) {
@@ -95,7 +95,12 @@ func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {
         color=canvas.state.foreground.color
     });
 }
-func canvas_blit_image(dest: Canvas*, img: DrawableImage const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
+func canvas_blit_image(dest: Canvas*, img: DrawableImage const*, dx: int, dy: int, w: int, h: int) {
+    command_push_image(&dest.commands, {
+        x=dx, y=dy, w=w, h=h,
+        image=img.gpu_handle,
+    });
+}
 func canvas_blit(dest: Canvas*, src: Canvas const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
 
 func canvas_flush(sys: Sys*, dest: Canvas*)
@@ -121,10 +126,12 @@ func canvas_load_image(canvas: Canvas*, loaded_image: LoadedImage const*) : Draw
     image = libc.calloc(1, sizeof(image[0]));
     image.w = loaded_image.width;
     image.h = loaded_image.height;
+    image.gpu_handle = gpu_load_image(loaded_image);
     return image;
 }
 func canvas_unload_image(canvas: Canvas*, image: DrawableImage*)
 {
+    gpu_unload_image(image.gpu_handle);
     libc.free(image);
 }
 

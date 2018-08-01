@@ -23,12 +23,20 @@ struct CanvasCommandDrawSegment {
     color: Color;
 }
 
+struct CanvasCommandDrawImage {
+    x, y: int;
+    w, h: int;
+    image: GPUImageHandle;
+}
+
 struct CanvasCommandScissorRect {
     l, t: int;
     w, h: int;
 } 
 
 enum CanvasCommandKind {
+    COMMAND_DRAW_NOP,
+    COMMAND_DRAW_IMAGE,
     COMMAND_DRAW_RECT,
     COMMAND_DRAW_SEGMENT,
     COMMAND_SCISSOR_RECT,
@@ -38,6 +46,7 @@ struct CanvasCommand
 {
     kind: CanvasCommandKind;
     union {
+        draw_image: CanvasCommandDrawImage;
         draw_rect: CanvasCommandDrawRect;
         draw_segment: CanvasCommandDrawSegment;
         scissor_rect: CanvasCommandScissorRect;
@@ -59,6 +68,15 @@ func command_push_segment(queue: CanvasCommandQueue*, draw_segment: CanvasComman
     command := CanvasCommand{
         kind = COMMAND_DRAW_SEGMENT,
         draw_segment = draw_segment,
+    };
+    buf_push(&queue.commands, &command, sizeof(command));
+    queue.num_commands = buf_len(queue.commands);
+}
+
+func command_push_image(queue: CanvasCommandQueue*, draw_image: CanvasCommandDrawImage) {
+    command := CanvasCommand {
+        kind = COMMAND_DRAW_IMAGE,
+        draw_image = draw_image,
     };
     buf_push(&queue.commands, &command, sizeof(command));
     queue.num_commands = buf_len(queue.commands);

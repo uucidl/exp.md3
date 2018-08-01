@@ -8,6 +8,9 @@ import kaon.props {
 import kaon.res {
     FONT_DEFAULT,
     ICON_COMPUTER,
+    IMG_COMPUTER_SMALL,
+    IMG_COMPUTER_NORM,
+    IMG_COMPUTER_BIG,
     ICON_DIM_NORMAL,
     ICON_DIM_SMALL,
     LoadedImage,
@@ -50,11 +53,13 @@ func main(argc: int, argv: char **) : int
     app_fonts : char const*[] = {
         [FONT_DEFAULT] = "arial.ttf",
     };
-    app_icons: icon_def const[] = {
-        [ICON_COMPUTER] = {},
-    };
     app_imgs : LoadedImage[] = {
-        [ICON_COMPUTER] = codecs.image_load("ico_computer.png", 4),
+        [IMG_COMPUTER_SMALL]    = kaon_load_embedded_image({w = 16, h = 16, cmap = icon_computer_small_cmap,  data = icon_computer_small_data,   none = 0xD4D0C8}),
+        [IMG_COMPUTER_NORM]     = kaon_load_embedded_image({w = 32, h = 32, cmap = icon_computer_normal_cmap, data = icon_computer_normal_data,  none = 0xD4D0C8}),
+        [IMG_COMPUTER_BIG]      = kaon_load_embedded_image({w = 48, h = 48, cmap = icon_computer_big_cmap,    data = icon_computer_big_data,     none = 0xD4D0C8}),
+    };
+    app_icons: icon_def const[] = {
+        [ICON_COMPUTER] = {{IMG_COMPUTER_SMALL, IMG_COMPUTER_NORM, IMG_COMPUTER_BIG}},
     };
     res_init(&res, sys.surf, &{
         fnt = app_fonts,

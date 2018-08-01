@@ -62,6 +62,12 @@ enum res_source {
     RES_SOURCE_IMG,
 }
 
+enum IMG_TYPE {
+    IMG_COMPUTER_SMALL,
+    IMG_COMPUTER_NORM,
+    IMG_COMPUTER_BIG,
+}
+
 enum ICON_TYPE {
     ICON_NULL,
     ICON_COMPUTER,

@@ -3,4 +3,15 @@ import noir { noir_App = App }
 @foreign("gpu_flush_commands")
 func gpu_flush(app: noir_App*, commands : CanvasCommandQueue*);
 
+struct GPUImageHandle
+{
+    id: int;
+}
+
+@foreign("gpu_load_image")
+func gpu_load_image(image: LoadedImage const*) : GPUImageHandle;
+
+@foreign("gpu_unload_image")
+func gpu_unload_image(handle: GPUImageHandle);
+
 #foreign(header="gpu_gl.h", source="gpu_gl.c")
