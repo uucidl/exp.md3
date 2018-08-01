@@ -22,12 +22,12 @@ func ui_button_begin(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*)
                 canvas_stroke_line(sys.surf, b.left, b.top, b.left, b.bottom);
 
                 canvas_color(sys.surf, Color{r=64,g=64,b=64});
-                canvas_stroke_line(sys.surf, b.right-1, b.top, b.right-1, b.bottom);
-                canvas_stroke_line(sys.surf, b.left, b.bottom-1, b.right, b.bottom-1);
+                canvas_stroke_line(sys.surf, b.right-1, b.top, b.right-1, b.bottom-1);
+                canvas_stroke_line(sys.surf, b.left, b.bottom-1, b.right-1, b.bottom-1);
 
                 canvas_color(sys.surf, Color{r=128,g=128,b=128});
-                canvas_stroke_line(sys.surf, b.right-2, b.top+1, b.right-2, b.bottom-1);
-                canvas_stroke_line(sys.surf, b.left+1,b.bottom-2, b.right-2, b.bottom-2);
+                canvas_stroke_line(sys.surf, b.right-2, b.top+1, b.right-2, b.bottom-2);
+                canvas_stroke_line(sys.surf, b.left+1, b.bottom-2, b.right-2, b.bottom-2);
             } else {
                 canvas_color(sys.surf, Color{r=0,g=0,b=0});
                 canvas_stroke_rect(sys.surf, b.left, b.top, b.width-1, b.height-1, 0);
@@ -38,7 +38,7 @@ func ui_button_begin(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*)
                 canvas_line_thickness(sys.surf, 1);
                 canvas_line_style(sys.surf, XLINE_DASHED);
                 canvas_color(sys.surf, Color{r=0,g=0,b=0});
-                canvas_stroke_rect(sys.surf, b.left+3, b.top+3, b.width-7, b.height-7, 0);
+                canvas_stroke_rect(sys.surf, b.left+3, b.top+3, b.width-6, b.height-6, 0);
             }
         }
         }
