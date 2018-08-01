@@ -15,7 +15,29 @@ struct Color {
 }
 
 struct Canvas {
-    dummy: int;
+    state: CanvasState;
+    commands: CanvasCommandQueue;
+}
+
+struct CanvasVec {
+    x, y: int;
+}
+
+struct CanvasLineState {
+    style: xline_style;
+    thickness: int;
+}
+
+struct CanvasColorState {
+    color: Color;
+}
+
+struct CanvasState {
+    off: CanvasVec;
+    line: CanvasLineState;
+    background: CanvasColorState;
+    foreground: CanvasColorState;
+    font: DrawableFont const*;
 }
 
 struct DrawableFont {
@@ -28,18 +50,52 @@ struct DrawableImage {
     w, h: int;
 }
 
-func canvas_identity(canvas: Canvas*) {}
-func canvas_line_style(canvas: Canvas*, style: xline_style) {}
-func canvas_line_thickness(canvas: Canvas*, thickness: int) {}
-func canvas_color_background(canvas: Canvas*, argb: Color) {}
-func canvas_color(canvas: Canvas*, argb: Color) {}
-func canvas_font(canvas: Canvas*, font: DrawableFont const*) {}
-func canvas_fill_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {}
-func canvas_stroke_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {}
-func canvas_scissor(canvas: Canvas*, x: int, y: int, w: int, h: int) {}
+func canvas_identity(canvas: Canvas*) {
+    canvas.state.off = {};
+}
+func canvas_line_style(canvas: Canvas*, style: xline_style) {
+    canvas.state.line.style = style;
+}
+func canvas_line_thickness(canvas: Canvas*, thickness: int) {
+    canvas.state.line.thickness = thickness;
+}
+func canvas_color_background(canvas: Canvas*, argb: Color) {
+    canvas.state.background.color = argb;
+}
+func canvas_color(canvas: Canvas*, argb: Color) {
+    canvas.state.foreground.color = argb;
+}
+func canvas_font(canvas: Canvas*, font: DrawableFont const*) {
+    canvas.state.font = font;
+}
+func canvas_fill_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {
+    // @todo @incomplete r is not used
+    command_push_rect(&canvas.commands, {
+            l=x, t=y, w=w, h=h, 
+            flags=RECT_FLAGS_FILLED,
+            fill_color=canvas.state.foreground.color,
+    });
+}
+func canvas_stroke_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {
+    // @todo @incomplete r is not used
+    command_push_rect(&canvas.commands, {
+            l=x, t=y, w=w, h=h, 
+            flags=RECT_FLAGS_STROKED,
+            stroke_color=canvas.state.foreground.color,
+    });
+}
+func canvas_scissor(canvas: Canvas*, x: int, y: int, w: int, h: int) {
+    command_push_scissor_rect(&canvas.commands, {l=x, t=y, w=w, h=h});
+}
 func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {}
 func canvas_blit_image(dest: Canvas*, img: DrawableImage const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
 func canvas_blit(dest: Canvas*, src: Canvas const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
+
+func canvas_flush(dest: Canvas*)
+{
+    commands_free(&dest.commands);
+}
+
 func canvas_load_font_by_filepath(canvas: Canvas*, path: zstr) : DrawableFont* 
 {
     font : DrawableFont*;
@@ -63,3 +119,4 @@ func canvas_unload_image(canvas: Canvas*, image: DrawableImage*)
 {
     libc.free(image);
 }
+

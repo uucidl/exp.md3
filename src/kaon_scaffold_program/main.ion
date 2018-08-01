@@ -23,6 +23,7 @@ import kaon.res {
     res_shutdown,
 }
 import kaon.ui {...}
+import kaon.canvas {Canvas, canvas_flush}
 import kaon.utils {...}
 import kaon {
     Sys,
@@ -39,6 +40,7 @@ func main(argc: int, argv: char **) : int
     if (!noir.app_init()) { noir.print_and_clear_error(); }
     sys := Sys{
         noir = &noir.app,
+        surf = libc.calloc(1, sizeof(Canvas)),
     };
 
     cmd_init(&g_cmdsys);
@@ -73,12 +75,11 @@ func main(argc: int, argv: char **) : int
 
     while (noir.app_update()) {
         // do something
-
         ui_begin(&ctx);
         win := ui_panel{box=ctx.root.box};
         app_window(&ctx, &win, &ctx.root);
         ui_end(&ctx);
-
+        canvas_flush(ctx.sys.surf);
     }
 
     res_shutdown(&res, sys.surf);

@@ -1,0 +1,63 @@
+import containers {...}
+
+struct CanvasCommandQueue {
+    commands: CanvasCommand*;
+    num_commands: usize;
+}
+
+const RECT_FLAGS_FILLED = 1<<0;
+const RECT_FLAGS_STROKED = 1<<1;
+
+struct CanvasCommandDrawRect {
+    l, t: int;
+    w, h: int;
+    flags: int;
+    fill_color: Color;
+    stroke_color: Color;
+}
+ 
+struct CanvasCommandScissorRect {
+    l, t: int;
+    w, h: int;
+} 
+
+enum CanvasCommandKind {
+    COMMAND_DRAW_RECT,
+    COMMAND_SCISSOR_RECT,
+}
+
+struct CanvasCommand
+{
+    kind: CanvasCommandKind;
+    union {
+        draw_rect: CanvasCommandDrawRect;
+        scissor_rect: CanvasCommandScissorRect;
+    }
+}
+
+func command_push_rect(queue: CanvasCommandQueue*, draw_rect: CanvasCommandDrawRect)
+{
+    command := CanvasCommand{
+        kind = COMMAND_DRAW_RECT,
+        draw_rect = draw_rect,
+    };
+    buf_push(&queue.commands, &command, sizeof(command));
+    queue.num_commands = buf_len(queue.commands);
+}
+
+func command_push_scissor_rect(queue: CanvasCommandQueue*, scissor_rect: CanvasCommandScissorRect)
+{
+    command := CanvasCommand{
+        kind = COMMAND_SCISSOR_RECT,
+        scissor_rect = scissor_rect,
+    };
+    buf_push(&queue.commands, &command, sizeof(command));
+    queue.num_commands = buf_len(queue.commands);
+}
+
+func commands_free(queue: CanvasCommandQueue*)
+{
+    buf_free(queue.commands);
+    queue.commands = NULL;
+    queue.num_commands = 0;
+}
