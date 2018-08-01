@@ -1,4 +1,4 @@
-import kaon { Sys }
+import kaon {...}
 import kaon.res { 
     FONT_DEFAULT,
     Resources,
@@ -16,7 +16,7 @@ struct ui_ctx {
     res: Resources*;
     /* state */
     ids: ui_id_stk;
-    layout: ui_layout;
+    layout: UI_Layout;
     clip: scissor_rect;
     popup: ui_popup;
     disabled: bool;
@@ -40,7 +40,7 @@ struct ui_id {
     lo, hi: uintptr;
 }
 
-enum ui_layout {
+enum UI_Layout {
     UI_LAYOUT_STRETCH,
     UI_LAYOUT_FIT
 }
@@ -161,6 +161,36 @@ func ui_gen_id(s: ui_id_stk*) : ui_id
     };
 }
 
+func ui_anchor_center_height(b: ui_box*, center: int, height: int)
+{
+    #assert(b);
+    if (!b) { return; }
+    b.height = height;
+    b.center_y = center;
+    b.top = center - (b.height/2);
+    b.bottom = b.top + b.height;
+}
+
+func ui_anchor_center_width(b: ui_box*, center: int, width: int)
+{
+    #assert(b);
+    if (!b) { return; }
+    b.width = width;
+    b.center_x = center;
+    b.right = b.center_x + (width/2);
+    b.left = b.right - width;
+}
+
+func ui_anchor_left_right(b: ui_box*, left: int, right: int)
+{
+    #assert(b);
+    if (!b) { return; }
+    b.left = left;
+    b.right = right;
+    b.width = b.right - b.left;
+    b.center_x = b.left + (b.width/2);
+}
+
 func ui_anchor_left_width(b: ui_box*, left: int, width: int)
 {
     #assert(b);
@@ -181,6 +211,86 @@ func ui_anchor_top_height(b: ui_box*, top: int, height: int)
     b.center_y = b.top + (b.height/2);
 }
 
+func ui_panel_begin(ctx: ui_ctx*, p: ui_panel*, parent: ui_panel*)
+{
+    #assert(ctx && p);
+    p.parent = parent;
+    p.id = ui_gen_id(&ctx.ids);
+    if (ctx.activate_next && p.focusable && !ctx.disabled) {
+        ctx.activate_next = false;
+        ctx.active = p.id;
+    }
+    ui_panel_hot(ctx, p);
+    ui_panel_input(ctx, p);
+    p.state = ui_panel_state(ctx, p);
+}
+
+func ui_panel_end(p: ui_panel*)
+{
+    root := p.parent;
+    if (!root) { return; }
+    root.max_x = max_long(root.max_x, p.box.right);
+    root.max_y = max_long(root.max_y, p.box.bottom);
+}
+
+func ui_panel_input(ctx: ui_ctx*, p: ui_panel*)
+{
+    #assert(ctx && p);
+    #assert(ctx.sys);
+    sys := ctx.sys.noir;
+
+    if (ctx.disabled) { return; }
+    if (ui_id_eq(&p.id, &ctx.active) &&
+        ui_id_eq(&ctx.active, &ctx.origin)) {
+        p.down = true;
+    }
+    if (ui_id_eq(&p.id, &ctx.active)) {
+        if (sys.keys[SYS_KEY_NEXT_WIDGET].pressed) {
+            sys.keys[SYS_KEY_NEXT_WIDGET].pressed = false;
+            ctx.activate_next = true;
+        }
+        if (sys.keys[SYS_KEY_ACTIVATE].pressed) {
+            p.clicked = true;
+            p.down = true;
+        }
+    }
+    if (sys.mouse.moved) {
+        if (ui_id_eq(&p.id, &ctx.active) &&
+            ui_id_eq(&ctx.active, &ctx.origin)) {
+            p.dragged = true;
+        }
+    }
+    if (p.hovered) {
+        // @todo @input implement double click somehow
+        // p.doubled = sys.mouse.left_button.doubled;
+        p.down = sys.mouse.left_button.down;
+        p.pressed = sys.mouse.left_button.pressed;
+        p.released = sys.mouse.left_button.released;
+
+        if (p.pressed) {
+            p.drag_begin = true;
+        }
+        if (p.released) {
+            if (ui_id_eq(&ctx.hot, &ctx.active)) {
+                p.clicked = true;
+            }
+            if (ui_id_eq(&p.id, &ctx.origin)) {
+                p.drag_end = true;
+            }
+        }
+    }
+}
+
+func ui_panel_state(ctx: ui_ctx*, p: ui_panel*) : ui_state
+{
+    if (ctx.disabled) {
+        return UI_DISABLED;
+    } else if (ui_id_eq(&p.id, &ctx.active) && !ctx.activate_next) {
+        return UI_FOCUSED;
+    }
+    return UI_NORMAL;
+}
+
 func ui_panel_hot(ctx: ui_ctx*, p: ui_panel*)
 {
     #assert(ctx && p);
@@ -196,4 +306,16 @@ func ui_panel_hot(ctx: ui_ctx*, p: ui_panel*)
     }
     p.hovered = true;
     ctx.hot = p.id;
+}
+
+func ui_id_eq(a: ui_id*, b: ui_id*) : bool
+{
+    return a.lo == b.lo && a.hi == b.hi;
+}
+
+func ui_layout(ctx: ui_ctx*, layout: UI_Layout) : UI_Layout
+{
+    old := ctx.layout;
+    ctx.layout = layout;
+    return old;
 }

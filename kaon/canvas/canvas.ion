@@ -1,6 +1,9 @@
+import codecs { LoadedImage=Image }
 import kaon.utils { 
     zstr,
 }
+
+import libc
 
 enum xline_style {
     XLINE_SOLID,
@@ -17,10 +20,12 @@ struct Canvas {
 
 struct DrawableFont {
     dummy: int;
+    h: int;
 }
 
 struct DrawableImage {
     dummy: int;
+    w, h: int;
 }
 
 func canvas_identity(canvas: Canvas*) {}
@@ -29,9 +34,32 @@ func canvas_line_thickness(canvas: Canvas*, thickness: int) {}
 func canvas_color_background(canvas: Canvas*, argb: Color) {}
 func canvas_color(canvas: Canvas*, argb: Color) {}
 func canvas_font(canvas: Canvas*, font: DrawableFont const*) {}
+func canvas_fill_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {}
+func canvas_stroke_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int) {}
 func canvas_scissor(canvas: Canvas*, x: int, y: int, w: int, h: int) {}
-func canvas_blit(dest: Canvas*, src: Canvas*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
+func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {}
+func canvas_blit_image(dest: Canvas*, img: DrawableImage const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
+func canvas_blit(dest: Canvas*, src: Canvas const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
 func canvas_load_font_by_filepath(canvas: Canvas*, path: zstr) : DrawableFont* 
 {
-    return NULL;
+    font : DrawableFont*;
+    font = libc.calloc(1, sizeof(font[0]));
+    font.h = 14; // @todo this interface does not allow selecting a font size.
+    return font;
+}
+func canvas_unload_font(canvas: Canvas*, font: DrawableFont*)
+{
+    libc.free(font);
+}
+func canvas_load_image(canvas: Canvas*, loaded_image: LoadedImage const*) : DrawableImage*
+{
+    image : DrawableImage*;
+    image = libc.calloc(1, sizeof(image[0]));
+    image.w = loaded_image.width;
+    image.h = loaded_image.height;
+    return image;
+}
+func canvas_unload_image(canvas: Canvas*, image: DrawableImage*)
+{
+    libc.free(image);
 }

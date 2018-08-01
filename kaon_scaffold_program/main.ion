@@ -1,3 +1,4 @@
+import codecs
 import kaon.props {
     cmd_init,
     g_cmdsys,
@@ -5,19 +6,24 @@ import kaon.props {
     g_varsys,
 }
 import kaon.res {
+    FONT_DEFAULT,
+    ICON_COMPUTER,
+    ICON_DIM_NORMAL,
+    ICON_DIM_SMALL,
+    LoadedImage,
     kaon_res=Resources,
+    icon_def,
+    resources_def,    
+    font_ids,
+    res_font,
+    res_active_icon_dimension,
+    res_activate_icon,
+    res_icon_dim_size,
     res_init,
     res_shutdown,
-    resources_def,
-    font_ids,
-    FONT_DEFAULT,
 }
-import kaon.ui {
-    ui_ctx,
-    ui_begin,
-    ui_end,
-    ui_panel,
-}
+import kaon.ui {...}
+import kaon.utils {...}
 import kaon {
     Sys,
 }
@@ -41,9 +47,19 @@ func main(argc: int, argv: char **) : int
     app_fonts : char const*[] = {
         [FONT_DEFAULT] = "arial.ttf",
     };
+    app_icons: icon_def const[] = {
+        [ICON_COMPUTER] = {},
+    };
+    app_imgs : LoadedImage[] = {
+        [ICON_COMPUTER] = codecs.image_load("ico_computer.png", 4),
+    };
     res_init(&res, sys.surf, &{
         fnt = app_fonts,
         fnt_cnt = sizeof(app_fonts)/sizeof(app_fonts[0]),
+        img = app_imgs,
+        img_cnt = sizeof(app_imgs)/sizeof(app_imgs[0]),
+        ico = app_icons,
+        ico_cnt = sizeof(app_icons)/sizeof(app_icons[0]),
     });
 
     // test: show list of commands:
@@ -60,24 +76,40 @@ func main(argc: int, argv: char **) : int
 
         ui_begin(&ctx);
         win := ui_panel{box=ctx.root.box};
-        ui_window(&ctx, &win, &ctx.root);
+        app_window(&ctx, &win, &ctx.root);
         ui_end(&ctx);
 
     }
 
-    res_shutdown(&res);
+    res_shutdown(&res, sys.surf);
 
     return 0;
 }
 
-func ui_window(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
+struct directory
 {
-    /*
+    dummy: int;
+}
+
+func dir_activate(d: directory*)
+{
+    libc.printf("dir_activate\n");
+}
+
+func undo_clear()
+{
+    libc.printf("undo_clear\n");
+}
+
+var app_tree_root : directory*;
+
+func app_window(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
+{
     ui_panel_begin(ctx, pan, parent); {
-        const spacing = 6;
-        const menu_pad = 8;
-        const main_pad = 5;
-        const tool_pad = 4;
+        spacing : int const = 6;
+        menu_pad : int const = 8;
+        main_pad : int const = 5;
+        tool_pad : int const = 4;
 
         xf := res_font(ctx.res);
         small_icon_size := res_icon_dim_size(ICON_DIM_SMALL);
@@ -90,8 +122,11 @@ func ui_window(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
         ui_anchor_top_height(&menu.box, pan.box.top + main_pad, menu_height);
         ui_anchor_left_right(&menu.box, pan.box.left + main_pad,
             pan.box.right - main_pad);
-        ui_menu(ctx, &menu, pan);
+        app_menu(ctx, &menu, pan);
+    } ui_panel_end(pan);
 
+    /*
+    ui_panel_begin(ctx, pan, parent); {
         /* tool */
         struct ui_panel tool = {0};
         const int tool_height = xf.h + norm_icon_size + tool_pad;
@@ -107,4 +142,69 @@ func ui_window(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
         ui_content(ctx, &content, pan);
     } ui_panel_end(pan);
     */
+}
+
+func app_menu(ctx: ui_ctx*, pan: ui_panel*, root: ui_panel*)
+{
+    ui_layout(ctx, UI_LAYOUT_FIT);
+    ui_panel_begin(ctx, pan, root); {
+        spacing: int const = 4;
+        /* Home */
+        home: ui_panel;
+        ui_anchor_left_width(&home.box, pan.box.left, pan.box.height);
+        ui_anchor_top_height(&home.box, pan.box.top, pan.box.height);
+        res_activate_icon(ctx.res, ICON_COMPUTER);
+        ui_button_icon(ctx, &home, root);
+        if (home.clicked) {
+            dir_activate(app_tree_root);
+            undo_clear();
+        }
+        
+        /*
+        /* Search */
+        ui_disable(ctx);
+        struct ui_panel fnd = {0};
+        ui_anchor_left_width(&fnd.box, home.box.right + spacing, 80);
+        ui_anchor_top_height(&fnd.box, home.box.top, pan->box.height);
+        res_activate_icon(ctx->res, ICON_SEARCH);
+        ui_button_icon_label(ctx, &fnd, root, "Search", 0);
+        if (fnd.clicked)
+            printf("Search!\n");
+        ui_enable(ctx);
+
+        /* Checkbox */
+        static int checked = 1;
+        struct ui_panel chk = {0};
+        ui_anchor_left_width(&chk.box, fnd.box.right + spacing, 70);
+        ui_anchor_top_height(&chk.box, fnd.box.top, pan->box.height);
+        ui_checkbox(ctx, &chk, root, &checked, "Checkbox", 0);
+
+        /* Edit Box */
+        static int len = 5;
+        static char buf[64] = "Input";
+        struct ui_edit_box edit_box = {0};
+        struct ui_panel edit = {0};
+        ui_anchor_left_width(&edit.box, chk.box.right + spacing, 100);
+        ui_anchor_top_height(&edit.box, chk.box.top, pan->box.height);
+        ui_edit_box(ctx, &edit_box, &edit, root, buf, &len, szof(buf));
+
+        /* Spinner */
+        static int n = 10;
+        struct ui_panel spin = {0};
+        struct ui_spinner spinner = {0};
+        ui_anchor_left_width(&spin.box, edit.box.right + spacing, 60);
+        ui_anchor_top_height(&spin.box, edit.box.top, pan->box.height);
+        n = ui_spinner(ctx, &spinner, &spin, root, n);
+
+        /* combo */
+        static int weekday = 0;
+        static const char *items[] = {"Monday","Tuesday","Wednessday", "Thursday", "Friday", "Saturday", "Sunday"};
+        struct ui_panel c = {0};
+        struct ui_combo com = {.selected = weekday};
+        ui_anchor_left_width(&c.box, spin.box.right + spacing, 100);
+        ui_anchor_top_height(&c.box, spin.box.top, pan->box.height);
+        ui_combo(ctx, &com, &c, pan, items, cntof(items));
+        weekday = com.selected;
+        */
+    } ui_panel_end(pan);
 }

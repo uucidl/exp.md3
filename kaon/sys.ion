@@ -2,9 +2,16 @@ import .canvas {
     Canvas
 }
 
-import noir { noir_App = App }
+import noir { 
+    noir_App = App,
+    noir_KEY_RETURN = KEY_RETURN,
+    noir_KEY_TAB = KEY_TAB,
+}
 
 struct Sys {
     noir: noir_App*;
     surf: Canvas*;
 }
+
+const SYS_KEY_ACTIVATE = noir_KEY_RETURN;
+const SYS_KEY_NEXT_WIDGET = noir_KEY_TAB;

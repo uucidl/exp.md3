@@ -1,0 +1,73 @@
+import kaon.res { res_icon }
+
+func ui_button_begin(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*)
+{
+    ui_panel_begin(ctx, btn, parent); {
+        sys := ctx.sys;
+        b := &btn.box;
+
+        canvas_line_thickness(sys.surf, 1);
+        canvas_line_style(sys.surf, XLINE_SOLID);
+        canvas_color(sys.surf, Color{r=212,g=208,b=200});
+        canvas_fill_rect(sys.surf, b.left, b.top, b.width, b.height, 0);
+
+        switch (btn.state) {
+        default: #assert(false);
+        case UI_DISABLED:
+        case UI_FOCUSED:
+        case UI_NORMAL: {
+            if (!btn.down) {
+                canvas_color(sys.surf, Color{r=255,g=255,b=255});
+                canvas_stroke_line(sys.surf, b.left, b.top, b.right, b.top);
+                canvas_stroke_line(sys.surf, b.left, b.top, b.left, b.bottom);
+
+                canvas_color(sys.surf, Color{r=64,g=64,b=64});
+                canvas_stroke_line(sys.surf, b.right-1, b.top, b.right-1, b.bottom);
+                canvas_stroke_line(sys.surf, b.left, b.bottom-1, b.right, b.bottom-1);
+
+                canvas_color(sys.surf, Color{r=128,g=128,b=128});
+                canvas_stroke_line(sys.surf, b.right-2, b.top+1, b.right-2, b.bottom-1);
+                canvas_stroke_line(sys.surf, b.left+1,b.bottom-2, b.right-2, b.bottom-2);
+            } else {
+                canvas_color(sys.surf, Color{r=0,g=0,b=0});
+                canvas_stroke_rect(sys.surf, b.left, b.top, b.width-1, b.height-1, 0);
+                canvas_color(sys.surf, Color{r=135,g=136,b=143});
+                canvas_stroke_rect(sys.surf, b.left+1, b.top+1, b.width-3, b.height-3, 0);
+            }
+            if (btn.state == UI_FOCUSED) {
+                canvas_line_thickness(sys.surf, 1);
+                canvas_line_style(sys.surf, XLINE_DASHED);
+                canvas_color(sys.surf, Color{r=0,g=0,b=0});
+                canvas_stroke_rect(sys.surf, b.left+3, b.top+3, b.width-7, b.height-7, 0);
+            }
+        }
+        }
+    }
+}
+
+func ui_button_end(ctx: ui_ctx*, btn: ui_panel*)
+{
+    ui_panel_end(btn);
+}
+
+func ui_icon(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
+{
+    ui_panel_begin(ctx, pan, parent); {
+        sys := ctx.sys;
+        img := res_icon(ctx.res);
+        if (img) { canvas_blit_image(sys.surf, img, pan.box.left, pan.box.top, 0,0, img.w, img.h); }
+    } ui_panel_end(pan);
+}
+
+func ui_button_icon(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*)
+{
+    btn.focusable = true;
+    ui_button_begin(ctx, btn, parent); {
+        img := res_icon(ctx.res);
+        ico: ui_panel;
+        ico.unselectable = true;
+        ui_anchor_center_width(&ico.box, btn.box.center_x, img.w);
+        ui_anchor_center_height(&ico.box, btn.box.center_y, img.h);
+        ui_icon(ctx, &ico, btn);
+    } ui_button_end(ctx, btn);
+}
