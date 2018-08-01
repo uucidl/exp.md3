@@ -17,9 +17,12 @@ set CLCommonFlags="-I%HereDir%" -nologo -Z7 -W3 -wd4244 -wd4267 -wd4204 -wd4201 
 
 set IonCommonFlags=
 set IONHOME=%HereDir%\deps\bitwise\ion\
+set SRCDIR=%HereDir%\src
 
 REM work in progress
+pushd %SRCDIR%
 "%IonExe%" -check ddcg_program
+popd
 
 call :build_program_module docking_demo_program
 if %errorlevel% neq 0 exit /b 1
@@ -36,7 +39,7 @@ set Os=win32
 set Arch=x64
 set ProgramModuleName=%1
 set ProgramModuleCFile="%ObjDir%\out_%ProgramModuleName%.c"
-pushd %HereDir%
+pushd %SRCDIR%
 "%IonExe%" %IonCommonFlags% -os %Os% -arch %Arch% -o "%ProgramModuleCFile%" %ProgramModuleName%
 if %errorlevel% neq 0 exit /b 1
 popd
