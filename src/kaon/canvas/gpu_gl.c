@@ -39,6 +39,13 @@ void gpu_flush_commands(noir_App* noir_app, kaon_canvas_CanvasCommandQueue* queu
     for (int i = 0; i<queue->num_commands; i++) {
         Command const* command = &queue->commands[i];
         switch (command->kind) {
+            case KAON_CANVAS_COMMAND_CLEAR: {
+                nvgBeginPath(vg);
+                nvgRect(vg, 0, 0, noir_app->window.size.x, noir_app->window.size.y);
+                nvgFillColor(vg, nvgRGB(command->clear.r, command->clear.g, command->clear.b));
+                nvgFill(vg);
+            } break;
+
             case KAON_CANVAS_COMMAND_DRAW_IMAGE: {
                 CommandDrawImage const *draw_image = &command->draw_image;
                 int wh[2];
@@ -59,18 +66,23 @@ void gpu_flush_commands(noir_App* noir_app, kaon_canvas_CanvasCommandQueue* queu
                     nvgFill(vg);
                 }
                 if (draw_rect->flags & KAON_CANVAS_RECT_FLAGS_STROKED) {
+                    nvgStrokeWidth(vg, 1);
                     nvgStrokeColor(vg, nvgRGB(draw_rect->stroke_color.r, draw_rect->stroke_color.g, draw_rect->stroke_color.b));
                     nvgStroke(vg);
                 }
             } break;
 
             case KAON_CANVAS_COMMAND_DRAW_SEGMENT: {
+                nvgLineCap(vg, NVG_SQUARE);
+
                 nvgBeginPath(vg);
                 nvgMoveTo(vg, command->draw_segment.x0, command->draw_segment.y0);
                 nvgLineTo(vg, command->draw_segment.x1, command->draw_segment.y1);
                 nvgStrokeColor(vg, nvgRGB(command->draw_segment.color.r, command->draw_segment.color.g, command->draw_segment.color.b));
                 nvgStrokeWidth(vg, command->draw_segment.width);
                 nvgStroke(vg);
+                nvgFillColor(vg, nvgRGB(command->draw_segment.color.r, command->draw_segment.color.g, command->draw_segment.color.b));
+                nvgFill(vg);
             } break;
 
             case KAON_CANVAS_COMMAND_SCISSOR_RECT: {

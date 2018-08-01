@@ -54,6 +54,11 @@ struct DrawableImage {
 func canvas_identity(canvas: Canvas*) {
     canvas.state.off = {};
 }
+
+func canvas_clear(canvas: Canvas*, color: Color) {
+    command_push_clear(&canvas.commands, color);
+}
+
 func canvas_line_style(canvas: Canvas*, style: xline_style) {
     canvas.state.line.style = style;
 }
@@ -101,7 +106,9 @@ func canvas_blit_image(dest: Canvas*, img: DrawableImage const*, dx: int, dy: in
         image=img.gpu_handle,
     });
 }
-func canvas_blit(dest: Canvas*, src: Canvas const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {}
+func canvas_blit(dest: Canvas*, src: Canvas const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {
+    #assert(false);
+}
 
 func canvas_flush(sys: Sys*, dest: Canvas*)
 {

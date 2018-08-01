@@ -36,6 +36,7 @@ struct CanvasCommandScissorRect {
 
 enum CanvasCommandKind {
     COMMAND_DRAW_NOP,
+    COMMAND_CLEAR,
     COMMAND_DRAW_IMAGE,
     COMMAND_DRAW_RECT,
     COMMAND_DRAW_SEGMENT,
@@ -46,11 +47,22 @@ struct CanvasCommand
 {
     kind: CanvasCommandKind;
     union {
+        clear: Color;
         draw_image: CanvasCommandDrawImage;
         draw_rect: CanvasCommandDrawRect;
         draw_segment: CanvasCommandDrawSegment;
         scissor_rect: CanvasCommandScissorRect;
     }
+}
+
+func command_push_clear(queue: CanvasCommandQueue*, clear_color: Color)
+{
+    command := CanvasCommand {
+        kind = COMMAND_CLEAR, 
+        clear = clear_color,
+    };
+    buf_push(&queue.commands, &command, sizeof(command));
+    queue.num_commands = buf_len(queue.commands);
 }
 
 func command_push_rect(queue: CanvasCommandQueue*, draw_rect: CanvasCommandDrawRect)

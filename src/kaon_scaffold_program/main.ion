@@ -26,7 +26,7 @@ import kaon.res {
     res_shutdown,
 }
 import kaon.ui {...}
-import kaon.canvas {Canvas, canvas_flush}
+import kaon.canvas {Canvas, canvas_clear, canvas_flush}
 import kaon.utils {...}
 import kaon {
     Sys,
@@ -80,7 +80,7 @@ func main(argc: int, argv: char **) : int
     };
 
     while (noir.app_update()) {
-        // do something
+        canvas_clear(ctx.sys.surf, {r=212,g=208,b=200});
         ui_begin(&ctx);
         win := ui_panel{box=ctx.root.box};
         app_window(&ctx, &win, &ctx.root);
