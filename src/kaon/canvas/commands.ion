@@ -30,13 +30,13 @@ struct CanvasCommandDrawText {
     str_len: int;
     color: Color;
     font_height: int;
-    font: GPUFontHandle;
+    font: FontHandle;
 }
 
 struct CanvasCommandDrawImage {
     x, y: int;
     w, h: int;
-    image: GPUImageHandle;
+    image: ImageHandle;
 }
 
 struct CanvasCommandScissorRect {

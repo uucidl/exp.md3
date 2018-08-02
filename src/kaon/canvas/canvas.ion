@@ -47,12 +47,12 @@ struct CanvasTextExtend {
 
 struct DrawableFont {
     h: int;
-    gpu_handle: GPUFontHandle;
+    gpu_handle: FontHandle;
 }
 
 struct DrawableImage {
     w, h: int;
-    gpu_handle: GPUImageHandle;
+    gpu_handle: ImageHandle;
 }
 
 func canvas_identity(canvas: Canvas*) {

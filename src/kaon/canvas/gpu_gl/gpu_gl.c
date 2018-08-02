@@ -105,40 +105,40 @@ void gpu_flush_commands(noir_App* noir_app, kaon_canvas_CanvasCommandQueue* queu
     nvgEndFrame(vg);
 }
 
-kaon_canvas_GPUImageHandle
+kaon_canvas_gpu_gl_ImageHandle
 gpu_load_image(codecs_Image const* image)
 {
-    return (kaon_canvas_GPUImageHandle){ 
+    return (kaon_canvas_gpu_gl_ImageHandle){ 
         .id = nvgCreateImageRGBA(gpu_vg(), image->width, image->height, 0, image->interleaved_channels),
     };
 }
 
 void
-gpu_unload_image(kaon_canvas_GPUImageHandle handle)
+gpu_unload_image(kaon_canvas_gpu_gl_ImageHandle handle)
 {
     nvgDeleteImage(gpu_vg(), handle.id);
 }
 
-kaon_canvas_GPUFontHandle
+kaon_canvas_gpu_gl_FontHandle
 gpu_load_font_by_filepath(char const* path)
 {
     int font_id = nvgFindFont(gpu_vg(), path);
     if (font_id < 0) {
         font_id = nvgCreateFont(gpu_vg(), path, path);
     }
-    return (kaon_canvas_GPUFontHandle) {
+    return (kaon_canvas_gpu_gl_FontHandle) {
         .id = font_id,
     };
 }
 
 void
-gpu_unload_font(kaon_canvas_GPUFontHandle handle)
+gpu_unload_font(kaon_canvas_gpu_gl_FontHandle handle)
 {
     // Not supported @leak until context is deleted
 }
 
 int
-gpu_text_width(kaon_canvas_GPUFontHandle handle, int font_height, char const* str, char const* end)
+gpu_text_width(kaon_canvas_gpu_gl_FontHandle handle, int font_height, char const* str, char const* end)
 {
     NVGcontext *vg = gpu_vg();
     float bounds[4];
