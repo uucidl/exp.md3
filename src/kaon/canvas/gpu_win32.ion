@@ -1,4 +1,0 @@
-// @todo deal with duplication between gpu_win32 and gpu_osx, by having
-// a gl submodule to import in both cases.
-
-import .gpu_gl {...}

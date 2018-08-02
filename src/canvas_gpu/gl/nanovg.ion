@@ -1,0 +1,111 @@
+
+#foreign(header="<nanovg.h>")
+
+@foreign("NVG_SQUARE")
+const NVG_SQUARE = 2;
+
+@foreign("NVG_ALIGN_LEFT")
+const NVG_ALIGN_LEFT = 1<<0;
+
+@foreign("NVG_ALIGN_TOP")
+const NVG_ALIGN_TOP = 1<<3;
+
+@foreign("struct NVGcontext")
+struct NVGcontext;
+
+@foreign("struct NVGcolor")
+struct NVGcolor {
+    union {
+        rgba: float[4];
+        struct {
+            r, g, b, a: float;
+        }
+    }
+}
+
+@foreign("struct NVGpaint")
+struct NVGpaint
+{
+    xform: float[6];
+	extent: float[2];
+	radius: float;
+	feather: float;
+	innerColor: NVGcolor;
+	outerColor: NVGcolor;
+	image: int;
+}
+
+@foreign("nvgRGB")
+func nvgRGB(r: uint8, g: uint8, b: uint8) : NVGcolor;
+
+@foreign("nvgBeginFrame")
+func nvgBeginFrame(c: NVGcontext*, windowWidth: float, windowHeight: float, devicePixelRatio: float);
+
+@foreign("nvgEndFrame")
+func nvgEndFrame(c: NVGcontext*);
+
+@foreign("nvgFindFont")
+func nvgFindFont(c: NVGcontext*, name: char const*) : int;
+
+@foreign("nvgCreateFont")
+func nvgCreateFont(c: NVGcontext*, name: char const*, path: char const*) : int;
+
+@foreign("nvgFontFaceId")
+func nvgFontFaceId(c: NVGcontext*, id: int);
+
+@foreign("nvgFontSize")
+func nvgFontSize(c: NVGcontext*, height: float);
+
+@foreign("nvgTextBounds")
+func nvgTextBounds(c: NVGcontext*, x: float, y: float, str: char const*, end: char const*, bounds: float*);
+
+@foreign("nvgBeginPath")
+func nvgBeginPath(c: NVGcontext*);
+
+@foreign("nvgMoveTo")
+func nvgMoveTo(c: NVGcontext*, x: float, y: float);
+
+@foreign("nvgLineTo")
+func nvgLineTo(c: NVGcontext*, x: float, y: float);
+
+@foreign("nvgRect")
+func nvgRect(c: NVGcontext*, x: float, y: float, w: float, h: float);
+
+@foreign("nvgFillColor")
+func nvgFillColor(c: NVGcontext*, color: NVGcolor);
+
+@foreign("nvgFillPaint")
+func nvgFillPaint(c: NVGcontext*, paint: NVGpaint);
+
+@foreign("nvgFill")
+func nvgFill(c: NVGcontext*);
+
+@foreign("nvgStrokeColor")
+func nvgStrokeColor(c: NVGcontext*, color: NVGcolor);
+
+@foreign("nvgStrokeWidth")
+func nvgStrokeWidth(c: NVGcontext*, size: float);
+
+@foreign("nvgStroke")
+func nvgStroke(c: NVGcontext*);
+
+@foreign("nvgLineCap")
+func nvgLineCap(c: NVGcontext*, cap: int);
+
+@foreign("nvgTextAlign")
+func nvgTextAlign(c: NVGcontext*, align: int);
+
+@foreign("nvgText")
+func nvgText(c: NVGcontext*, x: float, y: float, str: char const*, end: char const*) : float;
+
+@foreign("nvgCreateImageRGBA")
+func nvgCreateImageRGBA(c: NVGcontext*, w: int, h: int, image_flags: int, data: uint8*) : int;
+
+@foreign("nvgDeleteImage")
+func nvgDeleteImage(c: NVGcontext*, image_id: int);
+
+@foreign("nvgImageSize")
+func nvgImageSize(c: NVGcontext*, image: int, w: int*, h: int*);
+
+@foreign("nvgImagePattern")
+func nvgImagePattern(c: NVGcontext*, ox: float, oy: float, ex: float, ey: float, angle: float, image: int, alpha: float) : NVGpaint;

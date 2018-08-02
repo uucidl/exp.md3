@@ -1,0 +1,133 @@
+import noir { app = App }
+import canvas_gpu {...}
+import libc
+
+var g_vg : NVGcontext*;
+
+func gpu_vg() : NVGcontext*
+{
+    if (!g_vg) {
+        if (!gladLoadGL()) { 
+            // @todo @error_handling
+            libc.fprintf(libc.stderr, "ERROR: could not initialize GL\n");
+            #assert(0);
+            libc.exit(1);
+        }
+        g_vg = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_DEBUG);
+    }
+    #assert(g_vg);
+    return g_vg;    
+}
+
+func gpu_flush(app: app*, queue : CanvasCommandQueue*)
+{
+    vg := gpu_vg();
+
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    
+    nvgBeginFrame(vg, app.window.size.x, app.window.size.y, app.display.dpi / 96.0);
+    for (i := 0; i<queue.num_commands; i++) {
+        command := &queue.commands[i];
+        switch (command.kind) {
+            case COMMAND_CLEAR: {
+                nvgBeginPath(vg);
+                nvgRect(vg, 0, 0, app.window.size.x, app.window.size.y);
+                nvgFillColor(vg, nvgRGB(command.clear.r, command.clear.g, command.clear.b));
+                nvgFill(vg);
+            }
+
+            case COMMAND_DRAW_IMAGE: {
+                draw_image := &command.draw_image;
+                wh: int[2];
+                nvgImageSize(vg, draw_image.image.id, &wh[0], &wh[1]);
+                image_paint := nvgImagePattern(vg, draw_image.x, draw_image.y, wh[0], wh[1], 0.0, draw_image.image.id, 1.0);
+                nvgBeginPath(vg);
+                nvgRect(vg, draw_image.x, draw_image.y, draw_image.w, draw_image.h);
+                nvgFillPaint(vg, image_paint);
+                nvgFill(vg);
+            }
+
+            case COMMAND_DRAW_RECT: {
+                draw_rect := &command.draw_rect;
+                nvgBeginPath(vg);
+                nvgRect(vg, draw_rect.l, draw_rect.t, draw_rect.w, draw_rect.h);
+                if (draw_rect.flags & RECT_FLAGS_FILLED) {
+                    nvgFillColor(vg, nvgRGB(draw_rect.fill_color.r, draw_rect.fill_color.g, draw_rect.fill_color.b));
+                    nvgFill(vg);
+                }
+                if (draw_rect.flags & RECT_FLAGS_STROKED) {
+                    nvgStrokeWidth(vg, 1);
+                    nvgStrokeColor(vg, nvgRGB(draw_rect.stroke_color.r, draw_rect.stroke_color.g, draw_rect.stroke_color.b));
+                    nvgStroke(vg);
+                }
+            }
+
+            case COMMAND_DRAW_SEGMENT: {
+                nvgLineCap(vg, NVG_SQUARE);
+
+                nvgBeginPath(vg);
+                nvgMoveTo(vg, command.draw_segment.x0, command.draw_segment.y0);
+                nvgLineTo(vg, command.draw_segment.x1, command.draw_segment.y1);
+                nvgStrokeColor(vg, nvgRGB(command.draw_segment.color.r, command.draw_segment.color.g, command.draw_segment.color.b));
+                nvgStrokeWidth(vg, command.draw_segment.width);
+                nvgStroke(vg);
+                nvgFillColor(vg, nvgRGB(command.draw_segment.color.r, command.draw_segment.color.g, command.draw_segment.color.b));
+                nvgFill(vg);
+            }
+
+            case COMMAND_DRAW_TEXT: {
+                c := command.draw_text;
+                nvgFillColor(vg, nvgRGB(c.color.r, c.color.g, c.color.b));
+                nvgFontFaceId(vg, c.font.id);
+                nvgFontSize(vg, c.font_height);
+                nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+                nvgText(vg, c.l, c.t, c.str, c.str + c.str_len);
+            }
+
+            case COMMAND_SCISSOR_RECT: {
+            }
+
+            default: {
+                #assert(false); // Unimplemented?
+            }
+        }
+    }
+    nvgEndFrame(vg);
+}
+
+func gpu_load_image(image: LoadedImage const*) : ImageHandle
+{
+    id := nvgCreateImageRGBA(gpu_vg(), image.width, image.height, 0, image.interleaved_channels);
+    #assert(id >= 0); // @todo @error_handling
+    return { id = id };
+}
+
+func gpu_unload_image(handle: ImageHandle)
+{
+    nvgDeleteImage(gpu_vg(), handle.id);
+}
+
+func gpu_load_font_by_filepath(path: char const*) : FontHandle
+{
+    font_id := nvgFindFont(gpu_vg(), path);
+    if (font_id < 0) {
+        font_id = nvgCreateFont(gpu_vg(), path, path);
+    }
+    return { id = font_id };
+}
+
+func gpu_unload_font(handle: FontHandle)
+{
+    // @leak Not supported by nanovg, will leak until context is deleted.
+}
+
+func gpu_text_width(handle: FontHandle, font_height: int, str: char const*, end: char const*) : int
+{
+    vg := gpu_vg();
+    bounds: float[4];
+    nvgFontFaceId(vg, handle.id);
+    nvgFontSize(vg, font_height);
+    nvgTextBounds(vg, 0.0, 0.0, str, end, &bounds[0]);
+    return bounds[2];
+}

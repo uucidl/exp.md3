@@ -1,7 +1,0 @@
-import platform.win32 { LPCSTR, PROC }
-
-@foreign("wglGetProcAddress")
-func wglGetProcAddress(Arg1 : LPCSTR) : PROC;
-
-#foreign(header="gl.h")
-#foreign(source="gl_win32.c")

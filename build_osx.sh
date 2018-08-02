@@ -9,6 +9,7 @@ function build_program_module() {
   	"$Module"
   	popd
 	cc -o output/"${Name}".elf output/"${Module}".c \
+		deps/nanovg/src/nanovg.c \
   		-F./deps/SDL2_osx -framework SDL2 \
   		-I./deps/SDL2_osx/SDL2.framework/Headers/ \
   		-I./deps/nanovg/src \

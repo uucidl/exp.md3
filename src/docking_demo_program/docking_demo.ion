@@ -1,6 +1,9 @@
 import libc
-import noir
+import noir { noir_App = App }
 import sdl
+
+import kaon.canvas
+import kaon { kaon_Sys = Sys }
 
 func main(argc : int, argv : char**) : int
 {
@@ -11,16 +14,33 @@ func main(argc : int, argv : char**) : int
         noir.print_and_clear_error(); libc.exit(1);
     }
 
-    glcontext := sdl.SDL_GL_CreateContext(noir.app.window.sdl);
-    if (!glcontext) {
-        noir.sdl_error("OpenGL Context: ");
-        noir.print_and_clear_error(); libc.exit(1);
-    }
+    kaon := kaon_init(&noir.app);
+
     while (noir.app_update()) {
         // @todo:         gl.glClear(gl.GL_COLOR_BUFFER_BIT);
         noir.print_and_clear_error();
     }
     noir.print_and_clear_error();
+
+    kaon_shutdown(&kaon);
+
     return 0;
 }
 
+struct Kaon
+{
+    sys: kaon_Sys;
+}
+
+func kaon_init(noir: noir_App*) : Kaon
+{
+    kaon := Kaon{ sys = { noir = noir } };
+    kaon.sys.surf = libc.calloc(1, sizeof(*kaon.sys.surf));
+    return kaon;
+}
+
+func kaon_shutdown(kaon: Kaon*)
+{
+    libc.free(kaon.sys.surf);
+    kaon.sys = {};
+}

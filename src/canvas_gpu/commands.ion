@@ -1,57 +1,13 @@
+import codecs { codecs_Image=Image }
 import containers {...}
+import kaon.utils { kaon_Color=Color, zstr }
 
-struct CanvasCommandQueue {
+typedef LoadedImage = codecs_Image;
+
+struct CanvasCommandQueue
+{
     commands: CanvasCommand*;
-    num_commands: usize;
-}
-
-const RECT_FLAGS_FILLED = 1<<0;
-const RECT_FLAGS_STROKED = 1<<1;
-
-struct CanvasCommandDrawRect {
-    l, t: int;
-    w, h: int;
-    flags: int;
-    fill_color: Color;
-    stroke_color: Color;
-}
-
-struct CanvasCommandDrawSegment {
-    x0, y0: int;
-    x1, y1: int;
-    width: int;
-    color: Color;
-}
-
-struct CanvasCommandDrawText {
-    l, t: int;
-    w, h: int;
-    str: zstr;
-    str_len: int;
-    color: Color;
-    font_height: int;
-    font: FontHandle;
-}
-
-struct CanvasCommandDrawImage {
-    x, y: int;
-    w, h: int;
-    image: ImageHandle;
-}
-
-struct CanvasCommandScissorRect {
-    l, t: int;
-    w, h: int;
-} 
-
-enum CanvasCommandKind {
-    COMMAND_DRAW_NOP,
-    COMMAND_CLEAR,
-    COMMAND_DRAW_IMAGE,
-    COMMAND_DRAW_RECT,
-    COMMAND_DRAW_SEGMENT,
-    COMMAND_DRAW_TEXT,
-    COMMAND_SCISSOR_RECT,
+    num_commands: int;
 }
 
 struct CanvasCommand
@@ -67,11 +23,81 @@ struct CanvasCommand
     }
 }
 
-func command_push_clear(queue: CanvasCommandQueue*, clear_color: Color)
+enum CanvasCommandKind
+{
+    COMMAND_DRAW_NOP,
+    COMMAND_CLEAR,
+    COMMAND_DRAW_IMAGE,
+    COMMAND_DRAW_RECT,
+    COMMAND_DRAW_SEGMENT,
+    COMMAND_DRAW_TEXT,
+    COMMAND_SCISSOR_RECT,
+}
+
+struct Color
+{
+    a, r, g, b: int;
+}
+
+const RECT_FLAGS_FILLED = 1<<0;
+const RECT_FLAGS_STROKED = 1<<1;
+
+struct CanvasCommandDrawRect
+{
+    l, t: int;
+    w, h: int;
+    flags: int;
+    fill_color: Color;
+    stroke_color: Color;
+}
+
+struct CanvasCommandDrawSegment
+{
+    x0, y0: int;
+    x1, y1: int;
+    width: int;
+    color: Color;
+}
+
+struct CanvasCommandDrawText
+{
+    l, t: int;
+    w, h: int;
+    str: char const*;
+    str_len: int;
+    color: Color;
+    font_height: int;
+    font: FontHandle;
+}
+
+struct CanvasCommandDrawImage
+{
+    x, y: int;
+    w, h: int;
+    image: ImageHandle;
+}
+
+struct CanvasCommandScissorRect
+{
+    l, t: int;
+    w, h: int;
+} 
+
+struct ImageHandle
+{
+    id: int;
+}
+
+struct FontHandle
+{
+    id: int;
+}
+
+func command_push_clear(queue: CanvasCommandQueue*, clear_color: kaon_Color)
 {
     command := CanvasCommand {
         kind = COMMAND_CLEAR, 
-        clear = clear_color,
+        clear = {a=255, r=clear_color.r, g=clear_color.g, b=clear_color.b},
     };
     buf_push(&queue.commands, &command, sizeof(command));
     queue.num_commands = buf_len(queue.commands);

@@ -6,7 +6,12 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "${workspaceFolder}/build_win32.bat",
+            "windows": {
+                "command": "${workspaceFolder}/build_win32.bat",
+            },
+            "osx": {
+                "command": "bash ${workspaceFolder}/build_osx.sh"
+            },
             "problemMatcher": [
                 "$msCompile"
             ]

@@ -1,0 +1,3 @@
+struct Color {
+    r, g, b: char;
+}

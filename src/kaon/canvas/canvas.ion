@@ -1,18 +1,37 @@
-import codecs { LoadedImage=Image }
+import canvas_gpu {
+    RECT_FLAGS_FILLED,
+    RECT_FLAGS_STROKED,
+    CanvasCommandQueue,
+    gpu_Color=Color,
+    FontHandle,
+    ImageHandle,
+    command_push_clear,
+    command_push_image,
+    command_push_rect,
+    command_push_scissor_rect,
+    command_push_segment,
+    command_push_text,
+    commands_free,
+    gpu_flush,
+    gpu_text_width,
+    gpu_load_font_by_filepath,
+    gpu_load_image,
+    gpu_unload_font,
+    gpu_unload_image,
+}
 import kaon.utils { 
+    Color,
     zstr,
 }
 import kaon { Sys }
+import codecs { LoadedImage=Image }
+
 
 import libc
 
 enum xline_style {
     XLINE_SOLID,
     XLINE_DASHED
-}
-
-struct Color {
-    r, g, b: char;
 }
 
 struct Canvas {
@@ -30,7 +49,7 @@ struct CanvasLineState {
 }
 
 struct CanvasColorState {
-    color: Color;
+    color: gpu_Color;
 }
 
 struct CanvasState {
@@ -80,11 +99,11 @@ func canvas_line_style(canvas: Canvas*, style: xline_style) {
 func canvas_line_thickness(canvas: Canvas*, thickness: int) {
     canvas.state.line.thickness = thickness;
 }
-func canvas_color_background(canvas: Canvas*, argb: Color) {
-    canvas.state.background.color = argb;
+func canvas_color_background(canvas: Canvas*, color: Color) {
+    canvas.state.background.color = {a=255, r=color.r, g=color.g, b=color.b};
 }
-func canvas_color(canvas: Canvas*, argb: Color) {
-    canvas.state.foreground.color = argb;
+func canvas_color(canvas: Canvas*, color: Color) {
+    canvas.state.foreground.color = {a=255, r=color.r, g=color.g, b=color.b};
 }
 func canvas_font(canvas: Canvas*, font: DrawableFont const*) {
     canvas.state.font = font;

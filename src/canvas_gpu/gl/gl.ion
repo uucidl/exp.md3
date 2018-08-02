@@ -1,0 +1,19 @@
+#foreign(header="<glad/glad.h>", source="<deps/GL3/src/glad.c>")
+
+@foreign("gladLoadGL")
+func gladLoadGL() : int;
+
+@foreign("GL_COLOR_BUFFER_BIT")
+const GL_COLOR_BUFFER_BIT = 0x00004000;
+
+@foreign("GL_STENCIL_BUFFER_BIT")
+const GL_STENCIL_BUFFER_BIT = 0x00000400;
+
+@foreign("GLbitfield")
+typedef GLbitfield = int;
+
+@foreign("glClearColor")
+func glClearColor(r: float, g: float, b: float, a: float);
+
+@foreign("glClear")
+func glClear(mask: GLbitfield);
