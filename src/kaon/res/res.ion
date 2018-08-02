@@ -66,11 +66,15 @@ enum IMG_TYPE {
     IMG_COMPUTER_SMALL,
     IMG_COMPUTER_NORM,
     IMG_COMPUTER_BIG,
+    IMG_SEARCH_SMALL,
+    IMG_SEARCH_NORM,
+    IMG_SEARCH_BIG,
 }
 
 enum ICON_TYPE {
     ICON_NULL,
     ICON_COMPUTER,
+    ICON_SEARCH,
 }
 
 func res_init(res: Resources*, canvas: Canvas*, defs : resources_def const*)

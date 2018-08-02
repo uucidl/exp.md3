@@ -1,3 +1,4 @@
+import libc { va_list, va_start, va_end }
 import kaon.res { res_icon }
 
 func ui_button_begin(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*)
@@ -50,15 +51,6 @@ func ui_button_end(ctx: ui_ctx*, btn: ui_panel*)
     ui_panel_end(btn);
 }
 
-func ui_icon(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
-{
-    ui_panel_begin(ctx, pan, parent); {
-        sys := ctx.sys;
-        img := res_icon(ctx.res);
-        if (img) { canvas_blit_image(sys.surf, img, pan.box.left, pan.box.top, img.w, img.h); }
-    } ui_panel_end(pan);
-}
-
 func ui_button_icon(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*)
 {
     btn.focusable = true;
@@ -71,3 +63,103 @@ func ui_button_icon(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*)
         ui_icon(ctx, &ico, btn);
     } ui_button_end(ctx, btn);
 }
+
+func ui_button_icon_label(ctx: ui_ctx*, btn: ui_panel*, parent: ui_panel*, txt: zstr, end: zstr)
+{
+    pad: int const = 4;
+    spacing: int const = 4;
+    xs := res_icon(ctx.res);
+    ext := canvas_text_measure(res_font(ctx.res), txt, end);
+
+    /* Layouting */
+    switch (ctx.layout) {
+    case UI_LAYOUT_FIT: {
+        btn_w := min_long(btn.box.width, ext.w + 2*pad + spacing + xs.w);
+        btn_h := max_long(btn.box.height, ext.h + 2*pad);
+        ui_anchor_left_width(&btn.box, btn.box.left, btn_w);
+        ui_anchor_top_height(&btn.box, btn.box.top, btn_h);
+    }
+    case UI_LAYOUT_STRETCH: {}
+    }
+
+    /* Widget */
+    btn.focusable = true;
+    ui_button_begin(ctx, btn, parent); {
+        pan := ui_panel {box = btn.box, unselectable = true};
+        ui_icon_label(ctx, &pan, btn, txt, end);
+    } ui_button_end(ctx, btn);
+}
+
+func ui_icon(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
+{
+    ui_panel_begin(ctx, pan, parent); {
+        sys := ctx.sys;
+        img := res_icon(ctx.res);
+        if (img) { canvas_blit_image(sys.surf, img, pan.box.left, pan.box.top, img.w, img.h); }
+    } ui_panel_end(pan);
+}
+
+func ui_icon_label(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*, txt: zstr, end: zstr)
+{
+    ui_panel_begin(ctx, pan, parent); {
+        sys := ctx.sys;
+        xs := res_icon(ctx.res);
+        ext := canvas_text_measure(res_font(ctx.res), txt, end);
+
+        /* icon */
+        ico := ui_panel{ unselectable = true };
+        ui_anchor_left_width(&ico.box, pan.box.left + 4, xs.w);
+        ui_anchor_center_height(&ico.box, pan.box.center_y, xs.h);
+        ui_icon(ctx, &ico, pan);
+
+        /* label */
+        lbl := ui_panel{ unselectable = true };
+        canvas_color(sys.surf, Color{});
+        ui_anchor_left_width(&lbl.box, ico.box.right + 4, ext.w);
+        ui_anchor_center_height(&lbl.box, pan.box.center_y, ext.h);
+        ui_label(ctx, &lbl, parent, txt, end);
+    } ui_panel_end(pan);
+}
+
+func ui_label(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*, str: zstr, end: zstr)
+{
+    ui_panel_begin(ctx, pan, parent); {
+        sys := ctx.sys;
+        xf := res_font(ctx.res);
+        end = !end ? str + libc.strlen(str): end;
+        bounds := ui_text_fit(pan.box.width, xf, str, end);
+
+        switch (pan.state) {
+        default: #assert(false);
+        case UI_DISABLED: {
+            canvas_color(sys.surf, Color{r=255, g=255, b=255});
+            canvas_draw_text(sys.surf, pan.box.left+1, pan.box.top+1,
+                pan.box.width, pan.box.height, str, bounds.len);
+            canvas_color(sys.surf, Color{r=153, g=153, b=153});
+            canvas_draw_text(sys.surf, pan.box.left, pan.box.top,
+                pan.box.width, pan.box.height, str, bounds.len);
+        }
+        case UI_FOCUSED:
+        case UI_NORMAL: {
+            canvas_draw_text(sys.surf, pan.box.left, pan.box.top,
+                pan.box.width, pan.box.height, str, bounds.len);
+        }
+        }
+    } ui_panel_end(pan);
+}
+
+func ui_labelf(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*, fmt: zstr, ...)
+{
+    n: int = 0;
+    buf: char[2*1024];
+    buf_len := sizeof(buf)/sizeof(buf[0]);
+
+    args : va_list;
+    va_start(&args, &fmt);
+    n = libc.vsnprintf(buf, buf_len, fmt, args);
+    va_end(&args);
+
+    if (n >= buf_len) { return; }
+    ui_label(ctx, pan, parent, buf, 0);
+}
+

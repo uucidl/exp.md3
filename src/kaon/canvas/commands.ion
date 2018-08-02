@@ -23,6 +23,16 @@ struct CanvasCommandDrawSegment {
     color: Color;
 }
 
+struct CanvasCommandDrawText {
+    l, t: int;
+    w, h: int;
+    str: zstr;
+    str_len: int;
+    color: Color;
+    font_height: int;
+    font: GPUFontHandle;
+}
+
 struct CanvasCommandDrawImage {
     x, y: int;
     w, h: int;
@@ -40,6 +50,7 @@ enum CanvasCommandKind {
     COMMAND_DRAW_IMAGE,
     COMMAND_DRAW_RECT,
     COMMAND_DRAW_SEGMENT,
+    COMMAND_DRAW_TEXT,
     COMMAND_SCISSOR_RECT,
 }
 
@@ -51,6 +62,7 @@ struct CanvasCommand
         draw_image: CanvasCommandDrawImage;
         draw_rect: CanvasCommandDrawRect;
         draw_segment: CanvasCommandDrawSegment;
+        draw_text: CanvasCommandDrawText;
         scissor_rect: CanvasCommandScissorRect;
     }
 }
@@ -80,6 +92,16 @@ func command_push_segment(queue: CanvasCommandQueue*, draw_segment: CanvasComman
     command := CanvasCommand{
         kind = COMMAND_DRAW_SEGMENT,
         draw_segment = draw_segment,
+    };
+    buf_push(&queue.commands, &command, sizeof(command));
+    queue.num_commands = buf_len(queue.commands);
+}
+
+func command_push_text(queue: CanvasCommandQueue*, draw_text: CanvasCommandDrawText)
+{
+    command := CanvasCommand{
+        kind = COMMAND_DRAW_TEXT,
+        draw_text = draw_text,
     };
     buf_push(&queue.commands, &command, sizeof(command));
     queue.num_commands = buf_len(queue.commands);

@@ -25,10 +25,10 @@ static NVGcontext* gpu_vg()
 
 void gpu_flush_commands(noir_App* noir_app, kaon_canvas_CanvasCommandQueue* queue)
 {
-    typedef kaon_canvas_CanvasCommandDrawRect CommandDrawRect;
-    typedef kaon_canvas_CanvasCommandDrawImage CommandDrawImage;
-
     typedef kaon_canvas_CanvasCommand Command;
+    typedef kaon_canvas_CanvasCommandDrawImage CommandDrawImage;
+    typedef kaon_canvas_CanvasCommandDrawRect CommandDrawRect;
+    typedef kaon_canvas_CanvasCommandDrawText CommandDrawText;
 
     NVGcontext* vg = gpu_vg();
 
@@ -85,8 +85,16 @@ void gpu_flush_commands(noir_App* noir_app, kaon_canvas_CanvasCommandQueue* queu
                 nvgFill(vg);
             } break;
 
-            case KAON_CANVAS_COMMAND_SCISSOR_RECT: {
+            case KAON_CANVAS_COMMAND_DRAW_TEXT: {
+                CommandDrawText const c = command->draw_text;
+                nvgFillColor(vg, nvgRGB(c.color.r, c.color.g, c.color.b));
+                nvgFontFaceId(vg, c.font.id);
+                nvgFontSize(vg, c.font_height);
+                nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+                nvgText(vg, c.l, c.t, c.str, c.str + c.str_len);
+            } break;
 
+            case KAON_CANVAS_COMMAND_SCISSOR_RECT: {
             } break;
 
             default: {
@@ -109,6 +117,35 @@ void
 gpu_unload_image(kaon_canvas_GPUImageHandle handle)
 {
     nvgDeleteImage(gpu_vg(), handle.id);
+}
+
+kaon_canvas_GPUFontHandle
+gpu_load_font_by_filepath(char const* path)
+{
+    int font_id = nvgFindFont(gpu_vg(), path);
+    if (font_id < 0) {
+        font_id = nvgCreateFont(gpu_vg(), path, path);
+    }
+    return (kaon_canvas_GPUFontHandle) {
+        .id = font_id,
+    };
+}
+
+void
+gpu_unload_font(kaon_canvas_GPUFontHandle handle)
+{
+    // Not supported @leak until context is deleted
+}
+
+int
+gpu_text_width(kaon_canvas_GPUFontHandle handle, int font_height, char const* str, char const* end)
+{
+    NVGcontext *vg = gpu_vg();
+    float bounds[4];
+    nvgFontFaceId(vg, handle.id);
+    nvgFontSize(vg, font_height);
+    float advance = nvgTextBounds(vg, 0.0f, 0.0f, str, end, &bounds[0]);
+    return bounds[2];
 }
 
 #pragma comment(lib, "Opengl32.lib")

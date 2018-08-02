@@ -150,6 +150,9 @@ func ui_end(ctx: ui_ctx*)
     canvas_blit(sys.surf, p.surf, p.x, p.y, 0,0, p.w, p.h);
 }
 
+func ui_enable(ctx: ui_ctx*) { ctx.disabled = false; }
+func ui_disable(ctx: ui_ctx*) { ctx.disabled = true; }
+
 func ui_gen_id(s: ui_id_stk*) : ui_id
 {
     #assert(s && s.top);

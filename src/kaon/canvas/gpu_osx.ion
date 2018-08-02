@@ -8,6 +8,11 @@ struct GPUImageHandle
     id: int;
 }
 
+struct GPUFontHandle
+{
+    id: int;
+}
+
 @foreign("gpu_load_image")
 func gpu_load_image(image: LoadedImage const*) : GPUImageHandle;
 

@@ -8,9 +8,13 @@ import kaon.props {
 import kaon.res {
     FONT_DEFAULT,
     ICON_COMPUTER,
+    ICON_SEARCH,
     IMG_COMPUTER_SMALL,
     IMG_COMPUTER_NORM,
     IMG_COMPUTER_BIG,
+    IMG_SEARCH_SMALL,
+    IMG_SEARCH_NORM,
+    IMG_SEARCH_BIG,
     ICON_DIM_NORMAL,
     ICON_DIM_SMALL,
     LoadedImage,
@@ -51,15 +55,20 @@ func main(argc: int, argv: char **) : int
     var_init(&g_varsys);
     res : kaon_res;
     app_fonts : char const*[] = {
-        [FONT_DEFAULT] = "arial.ttf",
+        [FONT_DEFAULT] = "assets/IBMPlexMono-Text.ttf", // @todo trigger a hard error when the font cannot be found
     };
     app_imgs : LoadedImage[] = {
         [IMG_COMPUTER_SMALL]    = kaon_load_embedded_image({w = 16, h = 16, cmap = icon_computer_small_cmap,  data = icon_computer_small_data,   none = 0xD4D0C8}),
         [IMG_COMPUTER_NORM]     = kaon_load_embedded_image({w = 32, h = 32, cmap = icon_computer_normal_cmap, data = icon_computer_normal_data,  none = 0xD4D0C8}),
         [IMG_COMPUTER_BIG]      = kaon_load_embedded_image({w = 48, h = 48, cmap = icon_computer_big_cmap,    data = icon_computer_big_data,     none = 0xD4D0C8}),
+        [IMG_SEARCH_SMALL]      = kaon_load_embedded_image({w = 16, h = 16, cmap = icon_search_small_cmap,    data = icon_search_small_data,     none = 0xD4D0C8}),
+        [IMG_SEARCH_NORM]       = kaon_load_embedded_image({w = 32, h = 32, cmap = icon_search_normal_cmap,   data = icon_search_normal_data,    none = 0xD4D0C8}),
+        [IMG_SEARCH_BIG]        = kaon_load_embedded_image({w = 48, h = 48, cmap = icon_search_big_cmap,      data = icon_search_big_data,       none = 0xD4D0C8}),
+
     };
     app_icons: icon_def const[] = {
         [ICON_COMPUTER] = {{IMG_COMPUTER_SMALL, IMG_COMPUTER_NORM, IMG_COMPUTER_BIG}},
+        [ICON_SEARCH] = {{IMG_SEARCH_SMALL, IMG_SEARCH_NORM, IMG_SEARCH_BIG}},
     };
     res_init(&res, sys.surf, &{
         fnt = app_fonts,
@@ -130,18 +139,19 @@ func app_window(ctx: ui_ctx*, pan: ui_panel*, parent: ui_panel*)
         ui_anchor_left_right(&menu.box, pan.box.left + main_pad,
             pan.box.right - main_pad);
         app_menu(ctx, &menu, pan);
+/* @todo:
+        /* tool */
+        tool: ui_panel;
+        tool_height := xf.h + norm_icon_size + tool_pad;
+        res_active_icon_dimension(ctx.res, ICON_DIM_NORMAL);
+        ui_anchor_top_height(&tool.box, menu.box.bottom + spacing, tool_height);
+        ui_anchor_left_right(&tool.box, menu.box.left, menu.box.right);
+        app_tool(ctx, &tool, pan); // used to be called ui_tool
+*/        
     } ui_panel_end(pan);
 
     /*
     ui_panel_begin(ctx, pan, parent); {
-        /* tool */
-        struct ui_panel tool = {0};
-        const int tool_height = xf.h + norm_icon_size + tool_pad;
-        res_active_icon_dimension(ctx.res, ICON_DIM_NORMAL);
-        ui_anchor_top_height(&tool.box, menu.box.bottom + spacing, tool_height);
-        ui_anchor_left_right(&tool.box, menu.box.left, menu.box.right);
-        ui_tool(ctx, &tool, pan);
-
         /* content */
         struct ui_panel content = {0};
         ui_anchor_left_right(&content.box, tool.box.left, tool.box.right);
@@ -167,18 +177,18 @@ func app_menu(ctx: ui_ctx*, pan: ui_panel*, root: ui_panel*)
             undo_clear();
         }
         
-        /*
         /* Search */
         ui_disable(ctx);
-        struct ui_panel fnd = {0};
+        fnd: ui_panel;
         ui_anchor_left_width(&fnd.box, home.box.right + spacing, 80);
-        ui_anchor_top_height(&fnd.box, home.box.top, pan->box.height);
-        res_activate_icon(ctx->res, ICON_SEARCH);
+        ui_anchor_top_height(&fnd.box, home.box.top, pan.box.height);
+        res_activate_icon(ctx.res, res.ICON_SEARCH);
         ui_button_icon_label(ctx, &fnd, root, "Search", 0);
-        if (fnd.clicked)
-            printf("Search!\n");
+        if (fnd.clicked) {
+            libc.printf("Search!\n");
+        }
         ui_enable(ctx);
-
+/*
         /* Checkbox */
         static int checked = 1;
         struct ui_panel chk = {0};

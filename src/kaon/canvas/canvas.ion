@@ -41,9 +41,13 @@ struct CanvasState {
     font: DrawableFont const*;
 }
 
+struct CanvasTextExtend {
+    w, h: int;
+}
+
 struct DrawableFont {
-    dummy: int;
     h: int;
+    gpu_handle: GPUFontHandle;
 }
 
 struct DrawableImage {
@@ -57,6 +61,17 @@ func canvas_identity(canvas: Canvas*) {
 
 func canvas_clear(canvas: Canvas*, color: Color) {
     command_push_clear(&canvas.commands, color);
+}
+
+func canvas_draw_text(canvas: Canvas*, l: int, t: int, w: int, h: int, str: zstr, str_len: int)
+{
+    command_push_text(&canvas.commands, {
+        l = l, t = t, w = w, h = h,
+        str = str, str_len = str_len,
+        color = canvas.state.foreground.color,
+        font = canvas.state.font.gpu_handle,
+        font_height = canvas.state.font.h,
+    });
 }
 
 func canvas_line_style(canvas: Canvas*, style: xline_style) {
@@ -90,9 +105,11 @@ func canvas_stroke_rect(canvas: Canvas*, x: int, y: int, w: int, h: int, r: int)
             stroke_color=canvas.state.foreground.color,
     });
 }
+
 func canvas_scissor(canvas: Canvas*, x: int, y: int, w: int, h: int) {
     command_push_scissor_rect(&canvas.commands, {l=x, t=y, w=w, h=h});
 }
+
 func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {
     command_push_segment(&canvas.commands, {
         x0=x0, y0=y0, x1=x1, y1=y1,
@@ -100,12 +117,14 @@ func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {
         color=canvas.state.foreground.color
     });
 }
+
 func canvas_blit_image(dest: Canvas*, img: DrawableImage const*, dx: int, dy: int, w: int, h: int) {
     command_push_image(&dest.commands, {
         x=dx, y=dy, w=w, h=h,
         image=img.gpu_handle,
     });
 }
+
 func canvas_blit(dest: Canvas*, src: Canvas const*, dx: int, dy: int, sx: int, sy: int, w: int, h: int) {
     #assert(false);
 }
@@ -116,17 +135,33 @@ func canvas_flush(sys: Sys*, dest: Canvas*)
     commands_free(&dest.commands);
 }
 
+func canvas_get_text_width(f: DrawableFont const*, txt: zstr, end: zstr) : int {
+    return gpu_text_width(f.gpu_handle, f.h, txt, end);
+}
+
+func canvas_text_measure(f: DrawableFont const*, txt: zstr, end: zstr) : CanvasTextExtend
+{
+    return {
+        w = canvas_get_text_width(f, txt, end),
+        h = f.h,
+    };
+}
+
 func canvas_load_font_by_filepath(canvas: Canvas*, path: zstr) : DrawableFont* 
 {
     font : DrawableFont*;
     font = libc.calloc(1, sizeof(font[0]));
     font.h = 14; // @todo this interface does not allow selecting a font size.
+    font.gpu_handle = gpu_load_font_by_filepath(path);
     return font;
 }
+
 func canvas_unload_font(canvas: Canvas*, font: DrawableFont*)
 {
+    gpu_unload_font(font.gpu_handle);
     libc.free(font);
 }
+
 func canvas_load_image(canvas: Canvas*, loaded_image: LoadedImage const*) : DrawableImage*
 {
     image : DrawableImage*;
@@ -136,6 +171,7 @@ func canvas_load_image(canvas: Canvas*, loaded_image: LoadedImage const*) : Draw
     image.gpu_handle = gpu_load_image(loaded_image);
     return image;
 }
+
 func canvas_unload_image(canvas: Canvas*, image: DrawableImage*)
 {
     gpu_unload_image(image.gpu_handle);

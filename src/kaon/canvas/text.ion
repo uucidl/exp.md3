@@ -1,0 +1,24 @@
+import kaon.utils { utf8_iter, utf8_begin, utf8_next }
+
+struct ui_text_bounds {
+    len, width: int;
+    end: zstr;
+}
+
+func ui_text_fit(space: int, xf: DrawableFont const*, txt: zstr, end: zstr) : ui_text_bounds
+{
+    res: ui_text_bounds;
+    if (!space) { return res; }
+
+    it: utf8_iter;
+    for (utf8_begin(&it, txt, end); utf8_next(&it);) {
+        ext := canvas_text_measure(xf, txt, it.rune_end);
+        if (ext.w > space) {
+            return res;
+        }
+        res.end = it.rune_end;
+        res.len += it.rune_len;
+        res.width = ext.w;
+    }
+    return res;
+}
