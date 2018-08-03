@@ -39,13 +39,18 @@ set Os=win32
 set Arch=x64
 set ProgramModuleName=%1
 set ProgramModuleCFile="%ObjDir%\out_%ProgramModuleName%.c"
+
 pushd %SRCDIR%
+"%IonExe%" %IonCommonFlags% -check -os osx -arch %Arch% -o "%ProgramModuleCFile%" %ProgramModuleName%
+if %errorlevel% neq 0 exit /b 1
+
 "%IonExe%" %IonCommonFlags% -os %Os% -arch %Arch% -o "%ProgramModuleCFile%" %ProgramModuleName%
 if %errorlevel% neq 0 exit /b 1
 popd
 
 set O=%OutputDir%\%ProgramModuleName%.exe
-"%CLExe%" -Fe:"%O%" -Fo:"%ObjDir%\\" -I"%ObjDir%" "%ProgramModuleCFile%" ^
+"%CLExe%" -nologo -Fe:"%O%" -Fo:"%ObjDir%\\" -I"%ObjDir%" "%ProgramModuleCFile%" ^
+  "%HereDir%"\deps\nanovg\src\nanovg.c ^
   -I"%HereDir%"\deps\SDL2_%Os%\include\ ^
   -I"%HereDir%"\deps\nanovg\src ^
   -I"%HereDir%"\deps\GL3\include ^

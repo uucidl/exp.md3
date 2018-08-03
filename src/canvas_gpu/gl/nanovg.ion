@@ -1,5 +1,8 @@
 
 #foreign(header="<nanovg.h>")
+// @todo we can't have nanovg included as a unit, because it imports stb_image which we also import
+// it would be nice for ion to parse some directive and help with getting all the C translation units that
+// a program relies on, to be passed to the C compiler.
 
 @foreign("NVG_SQUARE")
 const NVG_SQUARE = 2;
