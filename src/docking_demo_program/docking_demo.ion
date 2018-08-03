@@ -49,23 +49,23 @@ func main(argc : int, argv : char**) : int
 
         ui_begin(&ui);
         kaon.canvas.canvas_clear_with_background(canvas);
+        window_group_panel: ui_panel = { box = ui.root.box };
+        app_window_group_begin(&ui, &window_group_panel, &ui.root, &windows);
         {
             window_id := 1;
             window := window_by_id(&windows, window_id);
-            app_window_begin(&ui, &window, &ui.root);
+            app_window_begin(&ui, &window, &window_group_panel);
             panel : ui_panel;
             app_fun_panel(&ui, &panel, &window.container, {r=255, g=127, b=0});
             app_window_end(&window);
-            window_state_by_id(&windows, window_id).box = window.pan.box;
         }
         {
             window_id := 2;
             window := window_by_id(&windows, window_id);
-            app_window_begin(&ui, &window, &ui.root);
+            app_window_begin(&ui, &window, &window_group_panel);
             panel: ui_panel;
             app_fun_panel(&ui, &panel, &window.container, {r=255, g=0, b=127});
             app_window_end(&window);
-            window_state_by_id(&windows, window_id).box = window.pan.box;
         }
 
         { 
@@ -75,13 +75,13 @@ func main(argc : int, argv : char**) : int
             // This is a bottom-up type layout.. (Not my concern right now)
             window_id := 3;
             window := window_by_id(&windows, window_id);
-            app_window_begin(&ui, &window, &ui.root);
+            app_window_begin(&ui, &window, &window_group_panel);
             text_panel: ui_panel;
             text_panel.box = window.container.box;
             ui_label(&ui, &text_panel, &window.container, "5000 years ahead", NULL);
             app_window_end(&window);
-            window_state_by_id(&windows, window_id).box = window.pan.box;
         }
+        app_window_group_end(&window_group_panel);
 
         ui_end(&ui);
         kaon.canvas.canvas_flush(&kaon_app.sys, canvas);
@@ -122,37 +122,49 @@ struct WindowGroup
     num_windows: usize;
 }
 
-func window_by_id(group: WindowGroup*, window_id : int) : UIWindow
-{
-    return { pan = { box = window_state_by_id(group, window_id).box } };
-}
-
-func window_state_by_id(group: WindowGroup*, window_id : int) : WindowState*
+func window_state_by_id(group: WindowGroup*, window_id: int) : WindowState*
 {
     containers.buf_alloc_at(&group.windows, sizeof(group.windows[0]), window_id);
     group.num_windows = containers.buf_len(group.windows);
     return &group.windows[window_id];
 }
 
+func window_by_id(group: WindowGroup*, window_id : int) : UIWindow
+{
+    state := window_state_by_id(group, window_id);
+    return { pan = { box = state.box }, state = state };
+}
+
 struct WindowState
 {
     box: ui_box;
+
+    // interaction    
+    delta_pos_x: int;
+    delta_pos_y: int;
+    moved: bool;
 }
 
 struct UIWindow
 {
     pan: ui_panel;
     container: ui_panel;
+    state: WindowState*;
 }
 
 func app_window_begin(ui: ui_ctx*, window: UIWindow*, parent: ui_panel*)
 {
     ui_panel_begin(ui, &window.pan, parent);
-    if (ui_id_eq(&window.pan.id, &ui.active) && window.pan.dragged) {
-        ui_anchor_move_x(&window.pan.box, ui.sys.noir.mouse.delta_pos.x);
-        ui_anchor_move_y(&window.pan.box, ui.sys.noir.mouse.delta_pos.y);
+    if (ui_id_eq(&window.pan.id, &ui.active)) {
+        if (window.pan.dragged) {
+            // @note this exposes that this API does not really allow working with multi-touch
+            window.state.moved = true;
+            window.state.delta_pos_x += ui.sys.noir.mouse.delta_pos.x;
+            window.state.delta_pos_y += ui.sys.noir.mouse.delta_pos.y;
+        } else if (window.pan.down) {
+            window.state.moved = true;
+        }
     }
-
     top_pad := 20;
     bottom_pad := 4;
     hpad := 4;
@@ -168,8 +180,45 @@ func app_window_begin(ui: ui_ctx*, window: UIWindow*, parent: ui_panel*)
     }
     canvas.canvas_fill_rect(ui.sys.surf, b.left, b.top, b.width, b.height, 0);
     canvas.canvas_color(ui.sys.surf, {255,255,255});
+    canvas.canvas_line_style(ui.sys.surf, canvas.XLINE_SOLID);
     canvas.canvas_stroke_line(ui.sys.surf, b.left, b.top, b.right-1, b.top);
     canvas.canvas_stroke_line(ui.sys.surf, b.left, b.top, b.left, b.bottom-1);   
+}
+
+func app_window_group_begin(ctx: ui_ctx*, panel: ui_panel*, parent: ui_panel*, group: WindowGroup*)
+{
+    surf := ctx.sys.surf;
+
+    // @todo @note this processes events with a one-frame delay, due to having to process events for all windows
+    // I could put it in app_window_group_end but that does not solve the delay
+    for (i:=0; i<group.num_windows; i++) {
+        w := &group.windows[i];
+        if (w.moved) {
+            // @todo it's interesting that as soon as you allow us to move windows and let them overlap, then the question of z-order shows-up
+            ui_anchor_move_x(&w.box, w.delta_pos_x);
+            ui_anchor_move_y(&w.box, w.delta_pos_y);
+            w.moved = false;
+            w.delta_pos_x = 0;
+            w.delta_pos_y = 0;
+            // show snap points for this window
+            for (snap_i:=0; snap_i<group.num_windows; snap_i++) {
+                if (snap_i == i) { continue; }
+                cw := &group.windows[snap_i];
+                b := cw.box;
+                canvas.canvas_line_style(surf, canvas.XLINE_DASHED);
+                canvas.canvas_stroke_line(surf, b.left, panel.box.top, b.left, panel.box.bottom);
+                canvas.canvas_stroke_line(surf, b.right, panel.box.top, b.right, panel.box.bottom);
+                canvas.canvas_stroke_line(surf, panel.box.left, b.top, panel.box.right, b.top);
+                canvas.canvas_stroke_line(surf, panel.box.left, b.bottom, panel.box.right, b.bottom);
+            }
+        }
+    }
+    ui_panel_begin(ctx, panel, parent);
+}
+
+func app_window_group_end(panel: ui_panel*)
+{
+    ui_panel_end(panel);
 }
 
 func app_window_end(window: UIWindow*)

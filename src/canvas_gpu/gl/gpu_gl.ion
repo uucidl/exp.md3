@@ -3,6 +3,7 @@ import canvas_gpu {...}
 import libc
 
 var g_vg : NVGcontext*;
+var g_vg_dashed_pattern_image: int;
 
 func gpu_vg() : NVGcontext*
 {
@@ -16,6 +17,13 @@ func gpu_vg() : NVGcontext*
         g_vg = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_DEBUG);
     }
     #assert(g_vg);
+
+    binary : uint32[] = { 0xff_000000, 0x00_000000 };
+    g_vg_dashed_pattern_image = nvgCreateImageRGBA(
+        g_vg, 2, 1, 
+        NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY | NVG_IMAGE_PREMULTIPLIED, 
+        (:uchar*)binary);
+
     return g_vg;    
 }
 
@@ -65,15 +73,24 @@ func gpu_flush(app: app*, queue : CanvasCommandQueue*)
 
             case COMMAND_DRAW_SEGMENT: {
                 nvgLineCap(vg, NVG_SQUARE);
-
                 nvgBeginPath(vg);
                 nvgMoveTo(vg, command.draw_segment.x0, command.draw_segment.y0);
                 nvgLineTo(vg, command.draw_segment.x1, command.draw_segment.y1);
-                nvgStrokeColor(vg, nvgRGB(command.draw_segment.color.r, command.draw_segment.color.g, command.draw_segment.color.b));
-                nvgStrokeWidth(vg, command.draw_segment.width);
-                nvgStroke(vg);
-                nvgFillColor(vg, nvgRGB(command.draw_segment.color.r, command.draw_segment.color.g, command.draw_segment.color.b));
-                nvgFill(vg);
+                if (command.draw_segment.flags & LINE_FLAGS_DASHED) {
+                    // @todo generate angle for a properly dashed line
+                    // @todo support color for dashes
+                    
+                    angle := libc.atan2(command.draw_segment.y1 - command.draw_segment.y0, command.draw_segment.x1-command.draw_segment.x0);
+                    wh: int[2];
+                    nvgImageSize(vg, g_vg_dashed_pattern_image, &wh[0], &wh[1]);
+                    dash := nvgImagePattern(vg, command.draw_segment.x0, command.draw_segment.y0, 2, 1, angle, g_vg_dashed_pattern_image, 1.0);
+                    nvgStrokePaint(vg, dash);
+                    nvgStroke(vg);
+                } else {
+                    nvgStrokeColor(vg, nvgRGB(command.draw_segment.color.r, command.draw_segment.color.g, command.draw_segment.color.b));
+                    nvgStrokeWidth(vg, command.draw_segment.width);
+                    nvgStroke(vg);
+                }
             }
 
             case COMMAND_DRAW_TEXT: {

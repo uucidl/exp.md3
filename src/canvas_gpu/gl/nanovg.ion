@@ -4,6 +4,15 @@
 // it would be nice for ion to parse some directive and help with getting all the C translation units that
 // a program relies on, to be passed to the C compiler.
 
+@foreign("NVG_IMAGE_REPEATX")
+const NVG_IMAGE_REPEATX = 1<<1;
+
+@foreign("NVG_IMAGE_REPEATY")
+const NVG_IMAGE_REPEATY = 1<<2;
+
+@foreign("NVG_IMAGE_PREMULTIPLIED")
+const NVG_IMAGE_PREMULTIPLIED = 1<<4;
+
 @foreign("NVG_SQUARE")
 const NVG_SQUARE = 2;
 
@@ -88,6 +97,9 @@ func nvgStrokeColor(c: NVGcontext*, color: NVGcolor);
 
 @foreign("nvgStrokeWidth")
 func nvgStrokeWidth(c: NVGcontext*, size: float);
+
+@foreign("nvgStrokePaint")
+func nvgStrokePaint(c: NVGcontext*, paint: NVGpaint);
 
 @foreign("nvgStroke")
 func nvgStroke(c: NVGcontext*);

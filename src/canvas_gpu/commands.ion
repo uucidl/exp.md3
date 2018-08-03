@@ -40,6 +40,7 @@ struct Color
 
 const RECT_FLAGS_FILLED = 1<<0;
 const RECT_FLAGS_STROKED = 1<<1;
+const LINE_FLAGS_DASHED = 1<<0;
 
 struct CanvasCommandDrawRect
 {
@@ -54,6 +55,7 @@ struct CanvasCommandDrawSegment
 {
     x0, y0: int;
     x1, y1: int;
+    flags: int;
     width: int;
     color: Color;
 }

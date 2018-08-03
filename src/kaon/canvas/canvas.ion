@@ -1,6 +1,7 @@
 import canvas_gpu {
     RECT_FLAGS_FILLED,
     RECT_FLAGS_STROKED,
+    LINE_FLAGS_DASHED,
     CanvasCommandQueue,
     gpu_Color=Color,
     FontHandle,
@@ -44,7 +45,7 @@ struct CanvasVec {
 }
 
 struct CanvasLineState {
-    style: xline_style;
+    gpu_flags: int;
     thickness: int;
 }
 
@@ -98,7 +99,12 @@ func canvas_draw_text(canvas: Canvas*, l: int, t: int, w: int, h: int, str: zstr
 }
 
 func canvas_line_style(canvas: Canvas*, style: xline_style) {
-    canvas.state.line.style = style;
+    switch(style) {
+        case XLINE_SOLID:
+            canvas.state.line.gpu_flags = 0;
+        case XLINE_DASHED:
+            canvas.state.line.gpu_flags = LINE_FLAGS_DASHED;
+    }
 }
 func canvas_line_thickness(canvas: Canvas*, thickness: int) {
     canvas.state.line.thickness = thickness;
@@ -136,6 +142,7 @@ func canvas_scissor(canvas: Canvas*, x: int, y: int, w: int, h: int) {
 func canvas_stroke_line(canvas: Canvas*, x0: int, y0: int, x1: int, y1: int) {
     command_push_segment(&canvas.commands, {
         x0=x0, y0=y0, x1=x1, y1=y1,
+        flags=canvas.state.line.gpu_flags,
         width=canvas.state.line.thickness,
         color=canvas.state.foreground.color
     });
