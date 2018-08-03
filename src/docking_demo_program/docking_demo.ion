@@ -1,12 +1,15 @@
-import libc
+import containers
 import noir { noir_App = App }
-import sdl
 
 import kaon.canvas
 import kaon.canvas { Color }
 import kaon.ui {...}
 import kaon.res {...}
 import kaon { kaon_Sys = Sys }
+
+import sdl
+
+import libc
 
 func main(argc : int, argv : char**) : int
 {
@@ -23,7 +26,22 @@ func main(argc : int, argv : char**) : int
         sys = &kaon_app.sys,
         res = &kaon_app.res,
     };
-
+    windows := WindowGroup{};
+    {   
+        window := window_state_by_id(&windows, 1);
+        ui_anchor_left_width(&window.box, 20, 150);
+        ui_anchor_top_height(&window.box, 20, 170);
+    }
+    {
+        window := window_state_by_id(&windows, 2);
+        ui_anchor_left_width(&window.box, 180, 150);
+        ui_anchor_top_height(&window.box, 20, 170);
+    }
+    {
+        window := window_state_by_id(&windows, 3);
+        ui_anchor_left_width(&window.box, 40, 120);
+        ui_anchor_top_height(&window.box, 200, 24+20);
+    }
     while (noir.app_update()) {
         noir.print_and_clear_error();
 
@@ -32,22 +50,37 @@ func main(argc : int, argv : char**) : int
         ui_begin(&ui);
         kaon.canvas.canvas_clear_with_background(canvas);
         {
-            window : Window;
-            ui_anchor_left_width(&window.pan.box, 20, 150);
-            ui_anchor_top_height(&window.pan.box, 20, 170);
+            window_id := 1;
+            window := window_by_id(&windows, window_id);
             app_window_begin(&ui, &window, &ui.root);
             panel : ui_panel;
             app_fun_panel(&ui, &panel, &window.container, {r=255, g=127, b=0});
             app_window_end(&window);
+            window_state_by_id(&windows, window_id).box = window.pan.box;
         }
         {
-            window : Window;
-            ui_anchor_left_width(&window.pan.box, 180, 150);
-            ui_anchor_top_height(&window.pan.box, 20, 170);
+            window_id := 2;
+            window := window_by_id(&windows, window_id);
             app_window_begin(&ui, &window, &ui.root);
             panel: ui_panel;
             app_fun_panel(&ui, &panel, &window.container, {r=255, g=0, b=127});
             app_window_end(&window);
+            window_state_by_id(&windows, window_id).box = window.pan.box;
+        }
+
+        { 
+            // @todo note that we have to size the window ahead of
+            // time depending on the content. The window isn't able to
+            // stretch itself to fit its content. How would you do that?
+            // This is a bottom-up type layout.. (Not my concern right now)
+            window_id := 3;
+            window := window_by_id(&windows, window_id);
+            app_window_begin(&ui, &window, &ui.root);
+            text_panel: ui_panel;
+            text_panel.box = window.container.box;
+            ui_label(&ui, &text_panel, &window.container, "5000 years ahead", NULL);
+            app_window_end(&window);
+            window_state_by_id(&windows, window_id).box = window.pan.box;
         }
 
         ui_end(&ui);
@@ -83,15 +116,43 @@ func app_fun_panel(ui: ui_ctx*, pan: ui_panel*, parent: ui_panel*, color: Color)
 // - resize horizontally
 // - resize diagonally
 
-struct Window
+struct WindowGroup
+{
+    windows: WindowState*;
+    num_windows: usize;
+}
+
+func window_by_id(group: WindowGroup*, window_id : int) : UIWindow
+{
+    return { pan = { box = window_state_by_id(group, window_id).box } };
+}
+
+func window_state_by_id(group: WindowGroup*, window_id : int) : WindowState*
+{
+    containers.buf_alloc_at(&group.windows, sizeof(group.windows[0]), window_id);
+    group.num_windows = containers.buf_len(group.windows);
+    return &group.windows[window_id];
+}
+
+struct WindowState
+{
+    box: ui_box;
+}
+
+struct UIWindow
 {
     pan: ui_panel;
     container: ui_panel;
 }
 
-func app_window_begin(ui: ui_ctx*, window: Window*, parent: ui_panel*)
+func app_window_begin(ui: ui_ctx*, window: UIWindow*, parent: ui_panel*)
 {
     ui_panel_begin(ui, &window.pan, parent);
+    if (ui_id_eq(&window.pan.id, &ui.active) && window.pan.dragged) {
+        ui_anchor_move_x(&window.pan.box, ui.sys.noir.mouse.delta_pos.x);
+        ui_anchor_move_y(&window.pan.box, ui.sys.noir.mouse.delta_pos.y);
+    }
+
     top_pad := 20;
     bottom_pad := 4;
     hpad := 4;
@@ -100,17 +161,31 @@ func app_window_begin(ui: ui_ctx*, window: Window*, parent: ui_panel*)
     ui_panel_begin(ui, &window.container, &window.pan);
 
     b := window.pan.box;
-    canvas.canvas_color(ui.sys.surf, {r=139, g=139, b=139});
+    if (ui_id_eq(&window.pan.id, &ui.active) && window.pan.down) {
+        canvas.canvas_color(ui.sys.surf, {r=109, g=109, b=109});
+    } else {
+        canvas.canvas_color(ui.sys.surf, {r=139, g=139, b=139});
+    }
     canvas.canvas_fill_rect(ui.sys.surf, b.left, b.top, b.width, b.height, 0);
     canvas.canvas_color(ui.sys.surf, {255,255,255});
     canvas.canvas_stroke_line(ui.sys.surf, b.left, b.top, b.right-1, b.top);
-    canvas.canvas_stroke_line(ui.sys.surf, b.left, b.top, b.left, b.bottom-1);
+    canvas.canvas_stroke_line(ui.sys.surf, b.left, b.top, b.left, b.bottom-1);   
 }
 
-func app_window_end(window: Window*)
+func app_window_end(window: UIWindow*)
 {
     ui_panel_end(&window.container);
     ui_panel_end(&window.pan);
+    //drag_begin, dragged, drag_end
+    if (window.pan.drag_begin) {
+        libc.printf("drag_begin\n");
+    }
+    if (window.pan.dragged) {
+        libc.printf("dragged\n");
+    }
+    if (window.pan.drag_end) {
+        libc.printf("drag_end\n");
+    }
 }
 
 struct Kaon

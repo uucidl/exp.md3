@@ -214,6 +214,16 @@ func ui_anchor_top_height(b: ui_box*, top: int, height: int)
     b.center_y = b.top + (b.height/2);
 }
 
+func ui_anchor_move_x(b: ui_box*, delta_x: int)
+{
+    ui_anchor_left_width(b, b.left + delta_x, b.width);
+}
+
+func ui_anchor_move_y(b: ui_box*, delta_y: int)
+{
+    ui_anchor_top_height(b, b.top + delta_y, b.height);
+}
+
 func ui_panel_begin(ctx: ui_ctx*, p: ui_panel*, parent: ui_panel*)
 {
     #assert(ctx && p);
