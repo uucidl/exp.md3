@@ -1,6 +1,5 @@
 import codecs { codecs_Image=Image }
 import containers {...}
-import kaon.utils { kaon_Color=Color, zstr }
 
 typedef LoadedImage = codecs_Image;
 
@@ -93,11 +92,11 @@ struct FontHandle
     id: int;
 }
 
-func command_push_clear(queue: CanvasCommandQueue*, clear_color: kaon_Color)
+func command_push_clear(queue: CanvasCommandQueue*, clear_color: Color)
 {
     command := CanvasCommand {
         kind = COMMAND_CLEAR, 
-        clear = {a=255, r=clear_color.r, g=clear_color.g, b=clear_color.b},
+        clear = clear_color,
     };
     buf_push(&queue.commands, &command, sizeof(command));
     queue.num_commands = buf_len(queue.commands);

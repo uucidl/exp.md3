@@ -79,7 +79,11 @@ func canvas_identity(canvas: Canvas*) {
 }
 
 func canvas_clear(canvas: Canvas*, color: Color) {
-    command_push_clear(&canvas.commands, color);
+    command_push_clear(&canvas.commands, {a=255, r=color.r, g=color.g, b=color.b});
+}
+
+func canvas_clear_with_background(canvas: Canvas*) {
+    command_push_clear(&canvas.commands, canvas.state.background.color);
 }
 
 func canvas_draw_text(canvas: Canvas*, l: int, t: int, w: int, h: int, str: zstr, str_len: int)

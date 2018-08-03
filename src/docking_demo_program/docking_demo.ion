@@ -3,6 +3,9 @@ import noir { noir_App = App }
 import sdl
 
 import kaon.canvas
+import kaon.canvas { Color }
+import kaon.ui {...}
+import kaon.res {...}
 import kaon { kaon_Sys = Sys }
 
 func main(argc : int, argv : char**) : int
@@ -14,33 +17,142 @@ func main(argc : int, argv : char**) : int
         noir.print_and_clear_error(); libc.exit(1);
     }
 
-    kaon := kaon_init(&noir.app);
+    kaon_app := kaon_init(&noir.app);
+
+    ui: ui_ctx = {
+        sys = &kaon_app.sys,
+        res = &kaon_app.res,
+    };
 
     while (noir.app_update()) {
-        // @todo:         gl.glClear(gl.GL_COLOR_BUFFER_BIT);
         noir.print_and_clear_error();
+
+        canvas := kaon_app.sys.surf;
+
+        ui_begin(&ui);
+        kaon.canvas.canvas_clear_with_background(canvas);
+        {
+            window : Window;
+            ui_anchor_left_width(&window.pan.box, 20, 150);
+            ui_anchor_top_height(&window.pan.box, 20, 170);
+            app_window_begin(&ui, &window, &ui.root);
+            panel : ui_panel;
+            app_fun_panel(&ui, &panel, &window.container, {r=255, g=127, b=0});
+            app_window_end(&window);
+        }
+        {
+            window : Window;
+            ui_anchor_left_width(&window.pan.box, 180, 150);
+            ui_anchor_top_height(&window.pan.box, 20, 170);
+            app_window_begin(&ui, &window, &ui.root);
+            panel: ui_panel;
+            app_fun_panel(&ui, &panel, &window.container, {r=255, g=0, b=127});
+            app_window_end(&window);
+        }
+
+        ui_end(&ui);
+        kaon.canvas.canvas_flush(&kaon_app.sys, canvas);
     }
     noir.print_and_clear_error();
 
-    kaon_shutdown(&kaon);
+    kaon_shutdown(&kaon_app);
 
     return 0;
+}
+
+func app_fun_panel(ui: ui_ctx*, pan: ui_panel*, parent: ui_panel*, color: Color)
+{
+    pan.box = parent.box;
+    ui_panel_begin(ui, pan, parent);
+    b := pan.box;
+    surf := ui.sys.surf;
+    kaon.canvas.canvas_color(surf, color);
+    kaon.canvas.canvas_fill_rect(surf, b.left, b.top, b.width, b.height, 0);
+    switch (pan.state) {
+        case UI_FOCUSED: {
+            kaon.canvas.canvas_color(surf, {});
+            kaon.canvas.canvas_stroke_rect(surf, b.left, b.top, b.width, b.height, 0);
+        }
+    }
+    ui_panel_end(pan);
+}
+
+// a window is a visual element which the user can
+// - move
+// - resize vertically
+// - resize horizontally
+// - resize diagonally
+
+struct Window
+{
+    pan: ui_panel;
+    container: ui_panel;
+}
+
+func app_window_begin(ui: ui_ctx*, window: Window*, parent: ui_panel*)
+{
+    ui_panel_begin(ui, &window.pan, parent);
+    top_pad := 20;
+    bottom_pad := 4;
+    hpad := 4;
+    ui_anchor_top_height(&window.container.box, window.pan.box.top+top_pad, window.pan.box.height-top_pad-bottom_pad);
+    ui_anchor_left_width(&window.container.box, window.pan.box.left+hpad, window.pan.box.width-hpad-hpad);
+    ui_panel_begin(ui, &window.container, &window.pan);
+
+    b := window.pan.box;
+    canvas.canvas_color(ui.sys.surf, {r=139, g=139, b=139});
+    canvas.canvas_fill_rect(ui.sys.surf, b.left, b.top, b.width, b.height, 0);
+    canvas.canvas_color(ui.sys.surf, {255,255,255});
+    canvas.canvas_stroke_line(ui.sys.surf, b.left, b.top, b.right-1, b.top);
+    canvas.canvas_stroke_line(ui.sys.surf, b.left, b.top, b.left, b.bottom-1);
+}
+
+func app_window_end(window: Window*)
+{
+    ui_panel_end(&window.container);
+    ui_panel_end(&window.pan);
 }
 
 struct Kaon
 {
     sys: kaon_Sys;
+    res: Resources;
 }
 
 func kaon_init(noir: noir_App*) : Kaon
 {
-    kaon := Kaon{ sys = { noir = noir } };
-    kaon.sys.surf = libc.calloc(1, sizeof(*kaon.sys.surf));
-    return kaon;
+    app := Kaon{ sys = { noir = noir } };
+    app.sys.surf = libc.calloc(1, sizeof(*app.sys.surf));
+    res_init(&app.res, app.sys.surf, &g_app_resources);
+    return app;
 }
 
-func kaon_shutdown(kaon: Kaon*)
+func kaon_shutdown(app: Kaon*)
 {
-    libc.free(kaon.sys.surf);
-    kaon.sys = {};
+    res_shutdown(&app.res, app.sys.surf);
+    libc.free(app.sys.surf);
+    app.sys = {};
 }
+
+var g_app_fnts : char const*[] = {
+    [FONT_DEFAULT] = "assets/IBMPlexMono-Text.ttf",
+};
+var g_app_resources : resources_def = {
+    fnt = g_app_fnts,
+    fnt_cnt = sizeof(g_app_fnts)/sizeof(g_app_fnts[0]),
+};
+
+/* @todo @ion_bug inline arrays are treated as if they were compounds.
+
+var g_app_resources : resources_def = {
+    fnt = &{
+        /* @todo ion has some issues with enums */
+        /* @todo @ion_bug does not work (and reports issue in the wrong file)
+        [FONT_DEFAULT] = , */
+        /* @todo @ion_bug crashes:
+        [kaon.res.FONT_DEFAULT] = "assets/IBMPlexMono-Text.ttf",*/
+        [MY_FONT_DEFAULT] = "assets/IBMPlexMono-Text.ttf",    
+    },
+    fnt_cnt = FONT_DEFAULT + 1,
+};
+*/
