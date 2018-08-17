@@ -1,6 +1,9 @@
 import containers {...}
 
+import containers2
+
 func main(argc : int, argv: char**) : int {
   test_array();
+  containers2.test_containers2();
   return 0;
 }

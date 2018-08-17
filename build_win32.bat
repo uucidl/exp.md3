@@ -24,6 +24,9 @@ pushd %SRCDIR%
 "%IonExe%" -check ddcg_program
 popd
 
+call :build_program_module containers_tests
+if %errorlevel% neq 0 exit /b 1
+
 call :build_program_module docking_demo_program
 if %errorlevel% neq 0 exit /b 1
 

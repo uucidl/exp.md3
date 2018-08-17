@@ -1,0 +1,85 @@
+import libc
+
+struct BufHdr
+{
+    magic: uint16;
+    capacity: usize;
+}
+
+func bufhdr(data_ptr: void*) : BufHdr*
+{
+    if (!data_ptr) { return NULL; }
+    first_byte : uint8* = data_ptr;
+    return (:void*)(first_byte - sizeof(BufHdr));
+}
+
+func bufhdr_byte_pos(hdr: BufHdr*, pos: usize) : uint8*
+{
+    #assert(pos <= hdr.capacity);    
+    first_byte: uint8* = ((:uint8*)hdr) + sizeof(BufHdr);
+    return &first_byte[pos];
+}
+
+func bufhdr_fit(hdr: BufHdr*, magic: uint16, size: usize) : BufHdr*
+{
+    if (size == 0) { return hdr; }
+    if (!hdr) {
+        hdr = libc.calloc(1, sizeof(*hdr));
+        *hdr = { magic = magic };
+    }
+    #assert(hdr.magic == magic);
+    if (hdr.capacity >= size) { return hdr; }
+    old_capacity := hdr? hdr.capacity : 0;
+    next_capacity := old_capacity + old_capacity;
+    new_capacity := size>next_capacity? size : next_capacity;
+    hdr = libc.realloc(hdr, sizeof(*hdr) + new_capacity);
+    libc.memset(bufhdr_byte_pos(hdr, old_capacity), 0, new_capacity - old_capacity);
+    hdr.capacity = new_capacity;
+    #assert(hdr.capacity >= size    );
+    return hdr;
+}
+
+func buf_hdr_free(hdr: BufHdr*, magic: uint16)
+{
+    #assert(!hdr || hdr.magic == magic);
+    libc.free(hdr);
+}
+
+func strbuf_cat_n(strbuf: char**, len: usize*, first_byte: char*, num_bytes: usize)
+{
+    hdr := bufhdr_fit(bufhdr(*strbuf), 0x5716, *len + num_bytes + 1);
+    libc.memcpy(bufhdr_byte_pos(hdr, *len), first_byte, num_bytes);
+    *strbuf = (:char*)bufhdr_byte_pos(hdr, 0);
+    *len = *len + num_bytes;
+}
+
+func strbuf_catz(strbuf: char**, len: usize*, first_byte: char*)
+{
+    strbuf_cat_n(strbuf, len, first_byte, libc.strlen(first_byte));
+}
+
+func ptrbuf_push(ptrbuf: void**, len: usize*, type: typeid, ptr: void*)
+{
+    elem_size := typeid_size(type);
+    hdr := bufhdr_fit(bufhdr(*ptrbuf), type, elem_size*(*len + 1));
+    *(:void**)bufhdr_byte_pos(hdr, elem_size*(*len)) = ptr;
+    *ptrbuf = (:void*)bufhdr_byte_pos(hdr, 0);
+    *len = *len + 1;
+}
+
+func test_containers2()
+{
+    str: char*;
+    str_len: usize;
+    strbuf_catz(&str, &str_len, "Hello, ");
+    strbuf_catz(&str, &str_len, "world.");
+
+    strs : char**;
+    strs_len: usize;
+    ptrbuf_push((:void**)&strs, &strs_len, typeof(*strs), str);
+    ptrbuf_push((:void**)&strs, &strs_len, typeof(*strs), str);
+
+    for (i:=0; i<strs_len; i++) {
+        libc.printf("str[%d] = str: %s\n", i, strs[i]);
+    }
+}

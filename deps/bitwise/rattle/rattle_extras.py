@@ -116,13 +116,13 @@ def scan3(xs, f):
         ys = scan3([f(x0, x1) for x0, x1 in zip(xs[::2], xs[1::2])], f)
         return unzip([xs[0]] + [f(y, x) for x, y in zip(xs[2::2], ys)], ys)
 
-def scan4(xs, f):
-    xs = list(xs)
+def scan4(x, f):
+    x = list(x)
     i = 1
-    while i < len(xs):
-        xs = [buf(x) for x in xs[:i]] + [f(x0, x1) for x0, x1 in zip(xs, xs[i:])]
+    while i < len(x):
+        x = x[:i] + [f(x0, x1) for x0, x1 in zip(x, x[i:])]
         i *= 2
-    return xs
+    return x
 
 def segscan(xs, bs, f):
     if len(xs) == 1:
@@ -443,56 +443,6 @@ class FastSIMDAdder:
 
 from functools import total_ordering
 
-@total_ordering
-class Bundle:
-    def __init__(self, keys, values):
-        self.keys = tuple(keys)
-        self.values = tuple(values)
-
-    def __iter__(self):
-        return iter(self.values)
-
-    def __len__(self):
-        return len(self.values)
-
-    def __hash__(self):
-        return hash((self.keys, self.values))
-
-    def __eq__(self, other):
-        if isinstance(other, Bundle) and self.keys == other.keys:
-            return self.values == other.values
-        return NotImplemented
-
-    def __lt__(self, other):
-        if isinstance(other, Bundle) and self.keys == other.keys:
-            return self.values < other.values
-        return NotImplemented
-
-    def __getitem__(self, i):
-        return self.values[i]
-
-    def __call__(self, *args, **kwargs):
-        values = list(self.values)
-        for i, value in enumerate(args):
-            values[i] = value
-        for key, value in kwargs.items():
-            values[self.keys.index(key)] = value
-        return Bundle(self.keys, values)
-
-    def __getattr__(self, name):
-        try:
-            return self.values[self.keys.index(name)]
-        except ValueError:
-            return super().__getattr__(name)
-
-    def __repr__(self):
-        return 'bundle(%s)' % (', '.join((key + '=' if type(key) == str else '') + repr(value) for key, value in zip(self.keys, self.values)))
-
-def bundle(*args, **kwargs):
-    keys = tuple(range(len(args))) + tuple(kwargs.keys())
-    values = tuple(args) + tuple(kwargs.values())
-    return Bundle(keys, values)
-
 # @bundle
 class float32:
     sign: bit
@@ -516,14 +466,106 @@ class Adder3:
     w = input(word)
     s = output(csa_array([x, y, z, w]))
 
-b1 = bundle(name='Per', age=35)
-b2 = bundle(age=35, name='Per')
-b3 = b1(name='Mon')(age=36)
-print(b1)
-print(b2)
-print(b1 > b3)
-print(b3)
-print(bundle(1, 2, 3))
+# minimum-depth circuit
 
-dot_file = open('example.dot', 'w')
-dot_file.write(generate_dot_file(Adder3))
+import heapq
+
+def minimum_delay_reduce(operator, values, delays, operator_delay=1):
+    heap = [wrap((delays[value], value)) for value in values]
+    heapq.heapify(heap)
+    while len(heap) != 1:
+        delay1, value1 = unwrap(heapq.heappop(heap))
+        delay2, value2 = unwrap(heapq.heappop(heap))
+        delay = max(delay1, delay2) + operator_delay
+        value = operator(value1, value2)
+        heapq.heappush(heap, wrap((delay, value)))
+    delay, value = unwrap(heap[0])
+    return value
+    
+@module
+class MinimumDelayReduce:
+    i = input(bit[8])
+    delays = {x: 1 for x in i}
+    delays[i[3]] = 4
+    delays[i[4]] = 10
+    o = output(minimum_delay_reduce(lambda x, y: x ^ y, i, delays))
+
+@module
+class And:
+    i1 = input(bit[8])
+    i2 = input(bit[8])
+    o = output(i1 & i2)
+
+@module
+class Xor:
+    i1 = input(bit[8])
+    i2 = input(bit[8])
+    and1 = And(i1=i1, i2=~i2)
+    and2 = And(i1=~i1, i2=i2)
+    o = output(and1.o | and2.o)
+
+@module
+class Test:
+    i1 = input(bit[8])
+    i2 = input(bit[8])
+    i3 = input(bit[8])
+    xor = Xor(i1=i1, i2=i2)
+    o = output(xor.o | ~i3)
+
+@module
+class Inv2:
+    i1 = input(bit)
+    t1 = ~i1
+    o1 = output(t1)
+
+    i2 = input(bit)
+    t2 = ~i2
+    o2 = output(t2)
+
+@module
+class Cyclic:
+    i = input(bit)
+    inv2 = Inv2(i1=i)
+    inv2.i2 = inv2.o1
+    o = output(inv2.o2)
+
+@module
+class CompilerTest:
+    i1 = input(bit[8])
+    i2 = input(bit[4])
+    o = output(i1 + i2 @ i2)
+    # i1 = input(bit[4])
+    # i2 = input(bit[8])
+    # i3 = input(bit[3])
+    # t1 = bits([i1, i2, i3])
+    # t2 = t1[3:6]
+    # t3 = t2 | ~t2
+    # t4 = t3 + ~t3
+    # t5 = (t4 @ 0) << 1
+    # t6 = when(i1[3], t5, 0 @ t4)
+    # o = output(t6)
+
+if __name__ == '__main__':
+    # TestCopy = copy_module(Test)
+    #Test2 = inline_top_module(Test)
+    Cyclic2 = inline_top_module(Cyclic)
+    Cyclic3 = remove_wires(Cyclic2)
+
+    dot_file = open('example.dot', 'w')
+    dot_file.write(generate_dot_file(Cyclic3))
+
+    cls = compile(Test)
+
+    # x = bundle()
+    # code = compile('Foo', inputs, outputs, instructions)
+    # i1, i2 = 200, 13
+    # result = code.evaluate(i1, i2)
+    # print(result.o)
+    # obj = code()
+    # obj.i1 = i1
+    # obj.i2 = i2
+    # obj.update()
+    # assert obj.o == result.o
+
+    delays = analyze_delay(Cyclic)
+    print(delays)
